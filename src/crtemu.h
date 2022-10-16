@@ -572,17 +572,10 @@ crtemu_t* crtemu_create( void* memctx )
     #endif
 
     char const* vs_source =
-        #if defined(__EMSCRIPTEN__)
-        "#version 300 es\n\n"
-        ""
-        "in vec4 pos;"
-        "out vec2 uv;"
-        #else
         "#version 130\n\n"
         ""
         "attribute vec4 pos;"
         "varying vec2 uv;"
-        #endif
         ""
         "void main( void )"
         "    {"
@@ -591,20 +584,9 @@ crtemu_t* crtemu_create( void* memctx )
         "    }";
 
     char const* crt_fs_source =
-        #if defined(__EMSCRIPTEN__)
-        "#version 300 es\n\n"
-        ""
-        "#define texture2D texture\n\n"
-        ""
-        "precision mediump float;"
-        ""
-        "in vec2 uv;"
-        "out vec4 fragColor;"
-        #else
         "#version 130\n\n"
         ""
         "varying vec2 uv;"
-        #endif
         ""
         "uniform vec3 modulate;"
         "uniform vec2 resolution;"
@@ -739,11 +721,7 @@ crtemu_t* crtemu_create( void* memctx )
         "    float fvig = clamp( -0.00+512.0*uv.x*uv.y*(1.0-uv.x)*(1.0-uv.y), 0.2, 0.8 );"
         "    col = mix( col, mix( max( col, 0.0), pow( abs( f.xyz ), vec3( 1.4 ) ) * fvig, f.w * f.w), vec3( use_frame ) );"
         "    "
-        #if defined(__EMSCRIPTEN__)
-        "    fragColor = vec4( col, 1.0 )* vec4( modulate, 1.0 );"
-        #else
         "    gl_FragColor = vec4( col, 1.0 )* vec4( modulate, 1.0 );"
-        #endif
         "    }"
         "";
 
@@ -751,20 +729,9 @@ crtemu_t* crtemu_create( void* memctx )
     if( crtemu->crt_shader == 0 ) goto failed;
 
     char const* blur_fs_source =
-        #if defined(__EMSCRIPTEN__)
-        "#version 300 es\n\n"
-        ""
-        "#define texture2D texture\n\n"
-        ""
-        "precision mediump float;"
-        ""
-        "in vec2 uv;"
-        "out vec4 fragColor;"
-        #else
         "#version 130\n\n"
         ""
         "varying vec2 uv;"
-        #endif
         ""
         "uniform vec2 blur;"
         "uniform sampler2D texture0;"
@@ -780,11 +747,7 @@ crtemu_t* crtemu_create( void* memctx )
         "    sum += texture2D(texture0, vec2( uv.x + 2.0 * blur.x, uv.y + 2.0 * blur.y ) ) * 0.1216216216;"
         "    sum += texture2D(texture0, vec2( uv.x + 3.0 * blur.x, uv.y + 3.0 * blur.y ) ) * 0.0540540541;"
         "    sum += texture2D(texture0, vec2( uv.x + 4.0 * blur.x, uv.y + 4.0 * blur.y ) ) * 0.0162162162;"
-        #if defined(__EMSCRIPTEN__)
-        "    fragColor = sum;"
-        #else
         "    gl_FragColor = sum;"
-        #endif
         "    }   "
         "";
 
@@ -792,20 +755,9 @@ crtemu_t* crtemu_create( void* memctx )
     if( crtemu->blur_shader == 0 ) goto failed;
 
     char const* accumulate_fs_source =
-        #if defined(__EMSCRIPTEN__)
-        "#version 300 es\n\n"
-        ""
-        "#define texture2D texture\n\n"
-        ""
-        "precision mediump float;"
-        ""
-        "in vec2 uv;"
-        "out vec4 fragColor;"
-        #else
         "#version 130\n\n"
         ""
         "varying vec2 uv;"
-        #endif
         ""
         "uniform sampler2D tex0;"
         "uniform sampler2D tex1;"
@@ -816,11 +768,7 @@ crtemu_t* crtemu_create( void* memctx )
         "    vec4 a = texture2D( tex0, uv ) * vec4( modulate );"
         "    vec4 b = texture2D( tex1, uv );"
         ""
-        #if defined(__EMSCRIPTEN__)
-        "    fragColor = max( a, b * 0.96 );"
-        #else
         "    gl_FragColor = max( a, b * 0.96 );"
-        #endif
         "    }   "
         "";
 
@@ -828,20 +776,9 @@ crtemu_t* crtemu_create( void* memctx )
     if( crtemu->accumulate_shader == 0 ) goto failed;
 
     char const* blend_fs_source =
-        #if defined(__EMSCRIPTEN__)
-        "#version 300 es\n\n"
-        ""
-        "#define texture2D texture\n\n"
-        ""
-        "precision mediump float;"
-        ""
-        "in vec2 uv;"
-        "out vec4 fragColor;"
-        #else
         "#version 130\n\n"
         ""
         "varying vec2 uv;"
-        #endif
         ""
         "uniform sampler2D tex0;"
         "uniform sampler2D tex1;"
@@ -852,11 +789,7 @@ crtemu_t* crtemu_create( void* memctx )
         "    vec4 a = texture2D( tex0, uv ) * vec4( modulate );"
         "    vec4 b = texture2D( tex1, uv );"
         ""
-        #if defined(__EMSCRIPTEN__)
-        "    fragColor = max( a, b * 0.32 );"
-        #else
         "    gl_FragColor = max( a, b * 0.32 );"
-        #endif
         "    }   "
         "";
 
@@ -864,30 +797,15 @@ crtemu_t* crtemu_create( void* memctx )
     if( crtemu->blend_shader == 0 ) goto failed;
 
     char const* copy_fs_source =
-        #if defined(__EMSCRIPTEN__)
-        "#version 300 es\n\n"
-        ""
-        "#define texture2D texture\n\n"
-        ""
-        "precision mediump float;"
-        ""
-        "in vec2 uv;"
-        "out vec4 fragColor;"
-        #else
         "#version 130\n\n"
         ""
         "varying vec2 uv;"
-        #endif
         ""
         "uniform sampler2D tex0;"
         ""
         "void main( void )"
         "    {"
-        #if defined(__EMSCRIPTEN__)
-        "    fragColor = texture2D( tex0, uv );"
-        #else
         "    gl_FragColor = texture2D( tex0, uv );"
-        #endif
         "    }   "
         "";
 
@@ -917,14 +835,9 @@ crtemu_t* crtemu_create( void* memctx )
     crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->frametexture );
     crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MIN_FILTER, CRTEMU_GL_LINEAR );
     crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MAG_FILTER, CRTEMU_GL_LINEAR );
-    #if defined(__EMSCRIPTEN__)
-    crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_S, CRTEMU_GL_CLAMP_TO_EDGE );
-    crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_T, CRTEMU_GL_CLAMP_TO_EDGE );
-    #else
     crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_S, CRTEMU_GL_CLAMP_TO_BORDER );
     crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_T, CRTEMU_GL_CLAMP_TO_BORDER );
     crtemu->TexParameterfv( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_BORDER_COLOR, color );
-    #endif
 
     crtemu->GenTextures( 1, &crtemu->backbuffer );
     crtemu->Enable( CRTEMU_GL_TEXTURE_2D );
@@ -932,14 +845,9 @@ crtemu_t* crtemu_create( void* memctx )
     crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->backbuffer );
     crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MIN_FILTER, CRTEMU_GL_NEAREST );
     crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MAG_FILTER, CRTEMU_GL_NEAREST );
-    #if defined(__EMSCRIPTEN__)
-    crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_S, CRTEMU_GL_CLAMP_TO_EDGE );
-    crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_T, CRTEMU_GL_CLAMP_TO_EDGE );
-    #else
     crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_S, CRTEMU_GL_CLAMP_TO_BORDER );
     crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_T, CRTEMU_GL_CLAMP_TO_BORDER );
     crtemu->TexParameterfv( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_BORDER_COLOR, color );
-    #endif
 
     crtemu->GenBuffers( 1, &crtemu->vertexbuffer );
     crtemu->BindBuffer( CRTEMU_GL_ARRAY_BUFFER, crtemu->vertexbuffer );
@@ -1020,14 +928,9 @@ static void crtemu_internal_blur( crtemu_t* crtemu, CRTEMU_GLuint source, CRTEMU
     crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, source );
     crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MIN_FILTER, CRTEMU_GL_LINEAR );
     crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MAG_FILTER, CRTEMU_GL_LINEAR );
-    #if defined(__EMSCRIPTEN__)
-    crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_S, CRTEMU_GL_CLAMP_TO_EDGE );
-    crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_T, CRTEMU_GL_CLAMP_TO_EDGE );
-    #else
     crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_S, CRTEMU_GL_CLAMP_TO_BORDER );
     crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_T, CRTEMU_GL_CLAMP_TO_BORDER );
     crtemu->TexParameterfv( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_BORDER_COLOR, color );
-    #endif
     crtemu->DrawArrays( CRTEMU_GL_TRIANGLE_FAN, 0, 4 );
     crtemu->ActiveTexture( CRTEMU_GL_TEXTURE0 );
     crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, 0 );
@@ -1041,14 +944,9 @@ static void crtemu_internal_blur( crtemu_t* crtemu, CRTEMU_GLuint source, CRTEMU
     crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, blurtexture_b );
     crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MIN_FILTER, CRTEMU_GL_LINEAR );
     crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MAG_FILTER, CRTEMU_GL_LINEAR );
-    #if defined(__EMSCRIPTEN__)
-    crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_S, CRTEMU_GL_CLAMP_TO_EDGE );
-    crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_T, CRTEMU_GL_CLAMP_TO_EDGE );
-    #else
     crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_S, CRTEMU_GL_CLAMP_TO_BORDER );
     crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_T, CRTEMU_GL_CLAMP_TO_BORDER );
     crtemu->TexParameterfv( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_BORDER_COLOR, color );
-    #endif
     crtemu->DrawArrays( CRTEMU_GL_TRIANGLE_FAN, 0, 4 );
     crtemu->ActiveTexture( CRTEMU_GL_TEXTURE0 );
     crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, 0 );
@@ -1129,26 +1027,16 @@ void crtemu_present( crtemu_t* crtemu, CRTEMU_U64 time_us, CRTEMU_U32 const* pix
     crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->backbuffer );
     crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MIN_FILTER, CRTEMU_GL_LINEAR );
     crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MAG_FILTER, CRTEMU_GL_LINEAR );
-    #if defined(__EMSCRIPTEN__)
-    crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_S, CRTEMU_GL_CLAMP_TO_EDGE );
-    crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_T, CRTEMU_GL_CLAMP_TO_EDGE );
-    #else
     crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_S, CRTEMU_GL_CLAMP_TO_BORDER );
     crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_T, CRTEMU_GL_CLAMP_TO_BORDER );
     crtemu->TexParameterfv( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_BORDER_COLOR, color );
-    #endif
     crtemu->ActiveTexture( CRTEMU_GL_TEXTURE1 );
     crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->blurtexture_a );
     crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MIN_FILTER, CRTEMU_GL_LINEAR );
     crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MAG_FILTER, CRTEMU_GL_LINEAR );
-    #if defined(__EMSCRIPTEN__)
-    crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_S, CRTEMU_GL_CLAMP_TO_EDGE );
-    crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_T, CRTEMU_GL_CLAMP_TO_EDGE );
-    #else
     crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_S, CRTEMU_GL_CLAMP_TO_BORDER );
     crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_T, CRTEMU_GL_CLAMP_TO_BORDER );
     crtemu->TexParameterfv( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_BORDER_COLOR, color );
-    #endif
     crtemu->DrawArrays( CRTEMU_GL_TRIANGLE_FAN, 0, 4 );
     crtemu->ActiveTexture( CRTEMU_GL_TEXTURE0 );
     crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, 0 );
@@ -1165,14 +1053,9 @@ void crtemu_present( crtemu_t* crtemu, CRTEMU_U64 time_us, CRTEMU_U32 const* pix
     crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->accumulatetexture_a );
     crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MIN_FILTER, CRTEMU_GL_LINEAR );
     crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MAG_FILTER, CRTEMU_GL_LINEAR );
-    #if defined(__EMSCRIPTEN__)
-    crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_S, CRTEMU_GL_CLAMP_TO_EDGE );
-    crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_T, CRTEMU_GL_CLAMP_TO_EDGE );
-    #else
     crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_S, CRTEMU_GL_CLAMP_TO_BORDER );
     crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_T, CRTEMU_GL_CLAMP_TO_BORDER );
     crtemu->TexParameterfv( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_BORDER_COLOR, color );
-    #endif
     crtemu->DrawArrays( CRTEMU_GL_TRIANGLE_FAN, 0, 4 );
     crtemu->ActiveTexture( CRTEMU_GL_TEXTURE0 );
     crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, 0 );
@@ -1289,40 +1172,25 @@ void crtemu_present( crtemu_t* crtemu, CRTEMU_U64 time_us, CRTEMU_U32 const* pix
     crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->accumulatetexture_a );
     crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MIN_FILTER, CRTEMU_GL_LINEAR );
     crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MAG_FILTER, CRTEMU_GL_LINEAR );
-    #if defined(__EMSCRIPTEN__)
-    crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_S, CRTEMU_GL_CLAMP_TO_EDGE );
-    crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_T, CRTEMU_GL_CLAMP_TO_EDGE );
-    #else
     crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_S, CRTEMU_GL_CLAMP_TO_BORDER );
     crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_T, CRTEMU_GL_CLAMP_TO_BORDER );
     crtemu->TexParameterfv( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_BORDER_COLOR, color );
-    #endif
 
     crtemu->ActiveTexture( CRTEMU_GL_TEXTURE1 );
     crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->blurtexture_a );
     crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MIN_FILTER, CRTEMU_GL_LINEAR );
     crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MAG_FILTER, CRTEMU_GL_LINEAR );
-    #if defined(__EMSCRIPTEN__)
-    crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_S, CRTEMU_GL_CLAMP_TO_EDGE );
-    crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_T, CRTEMU_GL_CLAMP_TO_EDGE );
-    #else
     crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_S, CRTEMU_GL_CLAMP_TO_BORDER );
     crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_T, CRTEMU_GL_CLAMP_TO_BORDER );
     crtemu->TexParameterfv( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_BORDER_COLOR, color );
-    #endif
 
     crtemu->ActiveTexture( CRTEMU_GL_TEXTURE3 );
     crtemu->BindTexture( CRTEMU_GL_TEXTURE_2D, crtemu->frametexture );
     crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MIN_FILTER, CRTEMU_GL_LINEAR );
     crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_MAG_FILTER, CRTEMU_GL_LINEAR );
-    #if defined(__EMSCRIPTEN__)
-    crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_S, CRTEMU_GL_CLAMP_TO_EDGE );
-    crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_T, CRTEMU_GL_CLAMP_TO_EDGE );
-    #else
     crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_S, CRTEMU_GL_CLAMP_TO_BORDER );
     crtemu->TexParameteri( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_WRAP_T, CRTEMU_GL_CLAMP_TO_BORDER );
     crtemu->TexParameterfv( CRTEMU_GL_TEXTURE_2D, CRTEMU_GL_TEXTURE_BORDER_COLOR, color );
-    #endif
 
     crtemu->DrawArrays( CRTEMU_GL_TRIANGLE_FAN, 0, 4 );
 
