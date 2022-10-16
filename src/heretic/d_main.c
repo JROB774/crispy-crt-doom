@@ -676,7 +676,7 @@ void drawstatus(void)
     TXT_BGColor(TXT_COLOR_BLUE, 0);
     TXT_FGColor(TXT_COLOR_BRIGHT_WHITE);
 
-    for (i=0; smsg[i] != '\0'; ++i) 
+    for (i=0; smsg[i] != '\0'; ++i)
     {
         TXT_PutChar(smsg[i]);
     }
@@ -737,7 +737,7 @@ void initStartup(void)
         return;
     }
 
-    if (!TXT_Init()) 
+    if (!TXT_Init())
     {
         using_graphical_startup = false;
         return;
@@ -863,6 +863,7 @@ void D_BindVariables(void)
     // [crispy] bind "crispness" config variables
     M_BindIntVariable("crispy_hires",           &crispy->hires);
     M_BindIntVariable("crispy_smoothscaling",   &crispy->smoothscaling);
+    M_BindIntVariable("crispy_crteffect",       &crispy->crteffect);
     M_BindIntVariable("crispy_automapoverlay",  &crispy->automapoverlay);
     M_BindIntVariable("crispy_automaprotate",   &crispy->automaprotate);
     M_BindIntVariable("crispy_automapstats",    &crispy->automapstats);
@@ -878,7 +879,7 @@ void D_BindVariables(void)
     M_BindIntVariable("crispy_widescreen",      &crispy->widescreen);
 }
 
-// 
+//
 // Called at exit to display the ENDOOM screen (ENDTEXT in Heretic)
 //
 

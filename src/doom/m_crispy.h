@@ -77,6 +77,7 @@ extern void M_CrispyToggleSecretmessage(int choice);
 extern void M_CrispyToggleSmoothLighting(int choice);
 extern void M_CrispyToggleSmoothMap(int choice);
 extern void M_CrispyToggleSmoothScaling(int choice);
+extern void M_CrispyToggleCRTEffect(int choice);
 extern void M_CrispyToggleSndChannels(int choice);
 extern void M_CrispyToggleSoundfixes(int choice);
 extern void M_CrispyToggleSoundMono(int choice);

@@ -115,6 +115,7 @@ static boolean SCInfo(int option);
 static boolean CrispyHires(int option);
 static boolean CrispyToggleWidescreen(int option);
 static boolean CrispySmoothing(int option);
+static boolean CrispyCRT(int option);
 static boolean CrispyBrightmaps(int option);
 static boolean CrispyAutomapStats(int option);
 static boolean CrispyLevelTime(int option);
@@ -341,6 +342,7 @@ static MenuItem_t Crispness1Items[] = {
     {ITT_LRFUNC, "HIGH RESOLUTION RENDERING:", CrispyHires, 0, MENU_NONE},
     {ITT_LRFUNC, "ASPECT RATIO:", CrispyToggleWidescreen, 0, MENU_NONE},
     {ITT_LRFUNC, "SMOOTH PIXEL SCALING:", CrispySmoothing, 0, MENU_NONE},
+    {ITT_LRFUNC, "CRT EFFECT:", CrispyCRT, 0, MENU_NONE},
     {ITT_LRFUNC, "UNCAPPED FRAMERATE:", CrispyUncapped, 0, MENU_NONE},
     {ITT_LRFUNC, "ENABLE VSYNC:", CrispyVsync, 0, MENU_NONE},
     {ITT_EMPTY, NULL, NULL, 0, MENU_NONE},
@@ -1394,9 +1396,16 @@ static boolean CrispyToggleWidescreen(int option)
 
     return true;
 }
+
 static boolean CrispySmoothing(int option)
 {
     crispy->smoothscaling = !crispy->smoothscaling;
+    return true;
+}
+
+static boolean CrispyCRT(int option)
+{
+    crispy->crteffect = !crispy->crteffect;
     return true;
 }
 
@@ -2369,11 +2378,14 @@ static void DrawCrispness1(void)
     // Smooth pixel scaling
     MN_DrTextA(crispy->smoothscaling ? "ON" : "OFF", 216, 55);
 
+    // CRT effect
+    MN_DrTextA(crispy->crteffect ? "ON" : "OFF", 217, 65); // @Todo: Is the X value alright?
+
     // Uncapped framerate
-    MN_DrTextA(crispy->uncapped ? "ON" : "OFF", 217, 65);
+    MN_DrTextA(crispy->uncapped ? "ON" : "OFF", 217, 75);
 
     // Vsync
-    MN_DrTextA(crispy->vsync ? "ON" : "OFF", 167, 75);
+    MN_DrTextA(crispy->vsync ? "ON" : "OFF", 167, 85);
 
     // Brightmaps
     MN_DrTextA(crispy->brightmaps == BRIGHTMAPS_OFF ? "NONE" :

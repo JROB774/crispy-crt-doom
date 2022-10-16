@@ -464,6 +464,12 @@ void M_CrispyToggleSmoothScaling(int choice)
     crispy->smoothscaling = !crispy->smoothscaling;
 }
 
+void M_CrispyToggleCRTEffect(int choice)
+{
+    choice = 0;
+    crispy->crteffect = !crispy->crteffect;
+}
+
 static void M_CrispyToggleSmoothLightingHook (void)
 {
     crispy->smoothlight = !crispy->smoothlight;

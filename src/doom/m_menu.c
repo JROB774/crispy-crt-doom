@@ -78,7 +78,7 @@ int			mouseSensitivity_y = 5; // [crispy] mouse sensitivity menu
 
 // Show messages has default, 0 = off, 1 = on
 int			showMessages = 1;
-	
+
 
 // Blocky mode, has default, 0 = high, 1 = normal
 int			detailLevel = 0;
@@ -120,12 +120,12 @@ char gammamsg[5+4][26+2] =
 };
 
 // we are going to be entering a savegame string
-int			saveStringEnter;              
+int			saveStringEnter;
 int             	saveSlot;	// which slot to save in
 int			saveCharIndex;	// which char we're editing
 static boolean          joypadSave = false; // was the save action initiated by joypad?
 // old save description before edit
-char			saveOldString[SAVESTRINGSIZE];  
+char			saveOldString[SAVESTRINGSIZE];
 
 boolean			inhelpscreens;
 boolean			menuactive;
@@ -154,16 +154,16 @@ typedef struct
 {
     // 0 = no cursor here, 1 = ok, 2 = arrows ok
     short	status;
-    
+
     char	name[10];
-    
+
     // choice = menu item #.
     // if status = 2,
     //   choice=0:leftarrow,1:rightarrow
     void	(*routine)(int choice);
-    
+
     // hotkey in menu
-    char	alphaKey;			
+    char	alphaKey;
     const char	*alttext; // [crispy] alternative text for menu items
 } menuitem_t;
 
@@ -190,7 +190,7 @@ short		whichSkull;		// which skull to draw
 const char *skullName[2] = {"M_SKULL1","M_SKULL2"};
 
 // current menudef
-menu_t*	currentMenu;                          
+menu_t*	currentMenu;
 
 //
 // PROTOTYPES
@@ -439,6 +439,7 @@ enum
     crispness_uncapped,
     crispness_vsync,
     crispness_smoothscaling,
+    crispness_crteffect,
     crispness_sep_rendering_,
 
     crispness_sep_visual,
@@ -463,6 +464,7 @@ static menuitem_t Crispness1Menu[]=
     {1,"",	M_CrispyToggleUncapped,'u'},
     {1,"",	M_CrispyToggleVsync,'v'},
     {1,"",	M_CrispyToggleSmoothScaling,'s'},
+    {1,"",  M_CrispyToggleCRTEffect,'c'},
     {-1,"",0,'\0'},
     {-1,"",0,'\0'},
     {1,"",	M_CrispyToggleColoredhud,'c'},
@@ -853,7 +855,7 @@ static int LoadDef_x = 72, LoadDef_y = 28;
 void M_DrawLoad(void)
 {
     int             i;
-	
+
     V_DrawPatchDirect(LoadDef_x, LoadDef_y,
                       W_CacheLumpName(DEH_String("M_LOADG"), PU_CACHE));
 
@@ -874,10 +876,10 @@ void M_DrawLoad(void)
 void M_DrawSaveLoadBorder(int x,int y)
 {
     int             i;
-	
+
     V_DrawPatchDirect(x - 8, y + 7,
                       W_CacheLumpName(DEH_String("M_LSLEFT"), PU_CACHE));
-	
+
     for (i = 0;i < 24;i++)
     {
 	V_DrawPatchDirect(x, y + 7,
@@ -885,7 +887,7 @@ void M_DrawSaveLoadBorder(int x,int y)
 	x += 8;
     }
 
-    V_DrawPatchDirect(x, y + 7, 
+    V_DrawPatchDirect(x, y + 7,
                       W_CacheLumpName(DEH_String("M_LSRGHT"), PU_CACHE));
 }
 
@@ -897,7 +899,7 @@ void M_DrawSaveLoadBorder(int x,int y)
 void M_LoadSelect(int choice)
 {
     char    name[256];
-	
+
     M_StringCopy(name, P_SaveGameFile(choice), sizeof(name));
 
     // [crispy] save the last game you loaded
@@ -921,7 +923,7 @@ void M_LoadGame (int choice)
 	M_StartMessage(DEH_String(LOADNET),NULL,false);
 	return;
     }
-	
+
     M_SetupNextMenu(&LoadDef);
     M_ReadSaveStrings();
 }
@@ -934,14 +936,14 @@ static int SaveDef_x = 72, SaveDef_y = 28;
 void M_DrawSave(void)
 {
     int             i;
-	
+
     V_DrawPatchDirect(SaveDef_x, SaveDef_y, W_CacheLumpName(DEH_String("M_SAVEG"), PU_CACHE));
     for (i = 0;i < load_end; i++)
     {
 	M_DrawSaveLoadBorder(LoadDef.x,LoadDef.y+LINEHEIGHT*i);
 	M_WriteText(LoadDef.x,LoadDef.y+LINEHEIGHT*i,savegamestrings[i]);
     }
-	
+
     if (saveStringEnter)
     {
 	i = M_StringWidth(savegamestrings[saveSlot]);
@@ -1061,10 +1063,10 @@ void M_SaveGame (int choice)
 	M_StartMessage(DEH_String(SAVEDEAD),NULL,false);
 	return;
     }
-	
+
     if (gamestate != GS_LEVEL)
 	return;
-	
+
     M_SetupNextMenu(&SaveDef);
     M_ReadSaveStrings();
 }
@@ -1094,7 +1096,7 @@ void M_QuickSave(void)
 
     if (gamestate != GS_LEVEL)
 	return;
-	
+
     if (quickSaveSlot < 0)
     {
 	M_StartControlPanel();
@@ -1129,7 +1131,7 @@ void M_QuickLoad(void)
 	M_StartMessage(DEH_String(QLOADNET),NULL,false);
 	return;
     }
-	
+
     if (quickSaveSlot < 0)
     {
 	// [crispy] allow quickload before quicksave
@@ -1165,7 +1167,7 @@ void M_DrawReadThis2(void)
 {
     inhelpscreens = true;
 
-    // We only ever draw the second page if this is 
+    // We only ever draw the second page if this is
     // gameversion == exe_doom_1_9 and gamemode == registered
 
     V_DrawPatchFullScreen(W_CacheLumpName(DEH_String("HELP1"), PU_CACHE), false);
@@ -1211,7 +1213,7 @@ void M_SfxVol(int choice)
 	    sfxVolume++;
 	break;
     }
-	
+
     S_SetSfxVolume(sfxVolume * 8);
 }
 
@@ -1228,7 +1230,7 @@ void M_MusicVol(int choice)
 	    musicVolume++;
 	break;
     }
-	
+
     S_SetMusicVolume(musicVolume * 8);
 }
 
@@ -1275,7 +1277,7 @@ void M_NewGame(int choice)
 	M_StartMessage(DEH_String(NEWGAME),NULL,false);
 	return;
     }
-	
+
     // Chex Quest disabled the episode select screen, as did Doom II.
 
     if ((gamemode == commercial && !crispy->havenerve && !crispy->havemaster) || gameversion == exe_chex) // [crispy] NRFTL / The Master Levels
@@ -1308,7 +1310,7 @@ void M_VerifyNightmare(int key)
 {
     if (key != key_menu_confirm)
 	return;
-		
+
     G_DeferedInitNew(nightmare,epi+1,1);
     M_ClearMenus ();
 }
@@ -1320,7 +1322,7 @@ void M_ChooseSkill(int choice)
 	M_StartMessage(DEH_String(NIGHTMARE),M_VerifyNightmare,true);
 	return;
     }
-	
+
     G_DeferedInitNew(choice,epi+1,1);
     M_ClearMenus ();
 }
@@ -1351,7 +1353,7 @@ void M_DrawOptions(void)
 {
     V_DrawPatchDirect(108, 15, W_CacheLumpName(DEH_String("M_OPTTTL"),
                                                PU_CACHE));
-	
+
     if (OptionsDef.lumps_missing == -1)
     {
     V_DrawPatchDirect(OptionsDef.x + 175, OptionsDef.y + LINEHEIGHT * detail,
@@ -1509,6 +1511,7 @@ static void M_DrawCrispness1(void)
     M_DrawCrispnessItem(crispness_uncapped, "Uncapped Framerate", crispy->uncapped, true);
     M_DrawCrispnessItem(crispness_vsync, "Enable VSync", crispy->vsync, !force_software_renderer);
     M_DrawCrispnessItem(crispness_smoothscaling, "Smooth Pixel Scaling", crispy->smoothscaling, true);
+    M_DrawCrispnessItem(crispness_crteffect, "CRT Effect", crispy->crteffect, !force_software_render);
 
     M_DrawCrispnessSeparator(crispness_sep_visual, "Visual");
     M_DrawCrispnessMultiItem(crispness_coloredhud, "Colorize HUD Elements", multiitem_coloredhud, crispy->coloredhud, true);
@@ -1662,7 +1665,7 @@ void M_ChangeMessages(int choice)
     // warning: unused parameter `int choice'
     choice = 0;
     showMessages = 1 - showMessages;
-	
+
     if (!showMessages)
 	players[consoleplayer].message = DEH_String(MSGOFF);
     else
@@ -1679,7 +1682,7 @@ void M_EndGameResponse(int key)
 {
     if (key != key_menu_confirm)
 	return;
-		
+
     // [crispy] killough 5/26/98: make endgame quit if recording or playing back demo
     if (demorecording || singledemo)
 	G_CheckDemoStatus();
@@ -1699,13 +1702,13 @@ void M_EndGame(int choice)
 	S_StartSoundOptional(NULL, sfx_mnuerr, sfx_oof); // [NS] Optional menu sounds.
 	return;
     }
-	
+
     if (netgame)
     {
 	M_StartMessage(DEH_String(NETEND),NULL,false);
 	return;
     }
-	
+
     M_StartMessage(DEH_String(ENDGAME),M_EndGameResponse,true);
 }
 
@@ -1797,7 +1800,7 @@ static const char *M_SelectEndMessage(void)
     else
     {
         // Doom 2
-        
+
         endmsg = doom2_endmsg;
     }
 
@@ -1913,7 +1916,7 @@ void M_SizeDisplay(int choice)
 	}
 	break;
     }
-	
+
 
     R_SetViewSize (screenblocks, detailLevel);
 }
@@ -1996,7 +1999,7 @@ int M_StringWidth(const char *string)
     size_t             i;
     int             w = 0;
     int             c;
-	
+
     for (i = 0;i < strlen(string);i++)
     {
 	// [crispy] correctly center colorized strings
@@ -2015,7 +2018,7 @@ int M_StringWidth(const char *string)
 	else
 	    w += SHORT (hu_font[c]->width);
     }
-		
+
     return w;
 }
 
@@ -2029,12 +2032,12 @@ int M_StringHeight(const char* string)
     size_t             i;
     int             h;
     int             height = SHORT(hu_font[0]->height);
-	
+
     h = height;
     for (i = 0;i < strlen(string);i++)
 	if (string[i] == '\n')
 	    h += height;
-		
+
     return h;
 }
 
@@ -2053,12 +2056,12 @@ M_WriteText
     int		c;
     int		cx;
     int		cy;
-		
+
 
     ch = string;
     cx = x;
     cy = y;
-	
+
     while(1)
     {
 	c = *ch++;
@@ -2080,14 +2083,14 @@ M_WriteText
 		continue;
 	    }
 	}
-		
+
 	c = toupper(c) - HU_FONTSTART;
 	if (c < 0 || c>= HU_FONTSIZE)
 	{
 	    cx += 4;
 	    continue;
 	}
-		
+
 	w = SHORT (hu_font[c]->width);
 	if (cx+w > ORIGWIDTH)
 	    break;
@@ -2279,10 +2282,10 @@ boolean M_Responder (event_t* ev)
     }
 
     // key is the key pressed, ch is the actual character typed
-  
+
     ch = 0;
     key = -1;
-	
+
     if (ev->type == ev_joystick)
     {
         // Simulate key presses from joystick events to interact with the menu.
@@ -2382,7 +2385,7 @@ boolean M_Responder (event_t* ev)
 		mousewait = I_GetTime() + 5;
 		mousey = lasty += 30;
 	    }
-		
+
 	    mousex += ev->data2;
 	    if (mousex < lastx-30)
 	    {
@@ -2396,13 +2399,13 @@ boolean M_Responder (event_t* ev)
 		mousewait = I_GetTime() + 5;
 		mousex = lastx += 30;
 	    }
-		
+
 	    if (ev->data1&1)
 	    {
 		key = key_menu_forward;
 		mousewait = I_GetTime() + 15;
 	    }
-			
+
 	    if (ev->data1&2)
 	    {
 		key = key_menu_back;
@@ -2431,7 +2434,7 @@ boolean M_Responder (event_t* ev)
 	    }
 	}
     }
-    
+
     if (key == -1)
 	return false;
 
@@ -2883,7 +2886,7 @@ void M_StartControlPanel (void)
     // [crispy] entering menus while recording demos pauses the game
     if (demorecording && !paused)
         sendpause = true;
-    
+
     menuactive = 1;
     currentMenu = &MainDef;         // JDC
     itemOn = currentMenu->lastOn;   // JDC
@@ -2938,7 +2941,7 @@ void M_Drawer (void)
     int			start;
 
     inhelpscreens = false;
-    
+
     // Horiz. & Vertically center string and print it.
     if (messageToPrint)
     {
@@ -2995,7 +2998,7 @@ void M_Drawer (void)
 
     if (currentMenu->routine)
 	currentMenu->routine();         // call Draw routine
-    
+
     // DRAW MENU
     x = currentMenu->x;
     y = currentMenu->y;
@@ -3029,7 +3032,7 @@ void M_Drawer (void)
 	y += LINEHEIGHT;
     }
 
-    
+
     // DRAW SKULL
     if (currentMenu == CrispnessMenus[crispness_cur])
     {

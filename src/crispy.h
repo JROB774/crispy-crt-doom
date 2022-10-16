@@ -70,6 +70,7 @@ typedef struct
 	int smoothlight;
 	int smoothmap;
 	int smoothscaling;
+    int crteffect;
 	int soundfix;
 	int soundfull;
 	int soundmono;
