@@ -73,6 +73,9 @@ static SDL_Renderer *renderer;
 #else
 static crtemu_t     *crtemu;
 static SDL_GLContext glcontext;
+static GLuint        gltarget;
+static int           gltargetw;
+static int           gltargeth;
 #endif
 
 // Window title
@@ -964,7 +967,79 @@ void I_FinishUpdate (void)
 
     crt_us += 16666;
 
-    crtemu_present(crtemu, crt_us, dstpixels, SCREENWIDTH, SCREENHEIGHT, 0xFFFFFF, 0x000000);
+    if(crispy->crteffect)
+    {
+        crtemu_present(crtemu, crt_us, dstpixels, SCREENWIDTH, SCREENHEIGHT, 0xFFFFFF, 0x000000);
+    }
+    else
+    {
+        if(gltargetw != SCREENWIDTH || gltargeth != SCREENHEIGHT)
+        {
+            glBindTexture(GL_TEXTURE_2D, gltarget);
+            glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, SCREENWIDTH,
+                SCREENHEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+            gltargetw = SCREENWIDTH;
+            gltargeth = SCREENHEIGHT;
+        }
+
+        int w = windoww;
+        int h = windowh;
+
+        if (w * actualheight < h * SCREENWIDTH)
+        {
+            // Tall window.
+
+            h = w * actualheight / SCREENWIDTH;
+        }
+        else
+        {
+            // Wide window.
+
+            w = h * SCREENWIDTH / actualheight;
+        }
+
+        // Pick texture size the next integer multiple of the screen dimensions.
+        // If one screen dimension matches an integer multiple of the original
+        // resolution, there is no need to overscale in this direction.
+
+        int w_upscale = (w + SCREENWIDTH - 1) / SCREENWIDTH;
+        int h_upscale = (h + SCREENHEIGHT - 1) / SCREENHEIGHT;
+
+        // Minimum texture dimensions of 320x200.
+
+        if (w_upscale < 1)
+        {
+            w_upscale = 1;
+        }
+        if (h_upscale < 1)
+        {
+            h_upscale = 1;
+        }
+
+        int dstx0 = (windoww - w) / 2;
+        int dsty0 = (windowh - h) / 2;
+        int dstx1 = dstx0 + w;
+        int dsty1 = dsty0 + h;
+
+        glEnable(GL_TEXTURE_2D);
+        crtemu->UseProgram(GL_NONE); // @Todo: Cleanup!
+        glBindTexture(GL_TEXTURE_2D, gltarget);
+        glTexSubImage2D(GL_TEXTURE_2D, 0, 0,0, gltargetw,
+            gltargeth, GL_RGBA, GL_UNSIGNED_BYTE, dstpixels);
+        glMatrixMode(GL_PROJECTION);
+        glLoadIdentity();
+        glOrtho(0,windoww,windowh,0,0,1);
+        glBegin(GL_QUADS);
+        glTexCoord2d(0.0f,0.0f); glVertex2d(dstx0,dsty0);
+        glTexCoord2d(1.0f,0.0f); glVertex2d(dstx1,dsty0);
+        glTexCoord2d(1.0f,1.0f); glVertex2d(dstx1,dsty1);
+        glTexCoord2d(0.0f,1.0f); glVertex2d(dstx0,dsty1);
+        glEnd();
+    }
 
     SDL_GL_SwapWindow(screen);
 
@@ -1583,6 +1658,28 @@ static void SetVideoMode(void)
     {
         I_Error("Error creating CRT emulation effect!");
     }
+
+    if (gltarget != GL_NONE)
+    {
+        glDeleteTextures(1, &gltarget);
+    }
+
+    glGenTextures(1, &gltarget);
+    glBindTexture(GL_TEXTURE_2D, gltarget);
+    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, SCREENWIDTH,
+        SCREENHEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    gltargetw = SCREENWIDTH;
+    gltargeth = SCREENHEIGHT;
+
+    if (gltarget == GL_NONE)
+    {
+        I_Error("Error creating OpenGL render target texture!");
+    }
+
     #endif
 
 #ifndef CRISPY_TRUECOLOR
