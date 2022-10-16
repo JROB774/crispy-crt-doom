@@ -30,13 +30,13 @@
 #include <windows.h>
 #endif
 
-#define CRISPY_CRT
-
-#ifdef CRISPY_CRT
+#ifndef CRTEMU_REPORT_SHADER_ERRORS
 #define CRTEMU_REPORT_SHADER_ERRORS
-#define CRTEMU_IMPLEMENTATION
-#include "crtemu.h"
 #endif
+#ifndef CRTEMU_IMPLEMENTATION
+#define CRTEMU_IMPLEMENTATION
+#endif
+#include "crtemu.h"
 
 #include "crispy.h"
 
@@ -65,12 +65,14 @@ int WIDESCREENDELTA; // [crispy] horizontal widescreen offset
 // These are (1) the window (or the full screen) that our game is rendered to
 // and (2) the renderer that scales the texture (see below) into this window.
 
-static SDL_Window *screen;
-#ifdef CRISPY_CRT
-static SDL_GLContext glcontext;
-static crtemu_t*     crtemu;
-#else
+// @Todo: Handle force_software_renderer + reimplemnt non-crt rendering...
+
+static SDL_Window   *screen;
+#if CRISPY_OLD_RENDERING
 static SDL_Renderer *renderer;
+#else
+static crtemu_t     *crtemu;
+static SDL_GLContext glcontext;
 #endif
 
 // Window title
@@ -88,10 +90,8 @@ static const char *window_title = "";
 static SDL_Surface *screenbuffer = NULL;
 #endif
 static SDL_Surface *argbbuffer = NULL;
-#ifndef CRISPY_CRT
-static SDL_Texture *texture = NULL;
-static SDL_Texture *texture_upscaled = NULL;
-#endif
+// static SDL_Texture *texture = NULL;
+// static SDL_Texture *texture_upscaled = NULL;
 
 #ifndef CRISPY_TRUECOLOR
 static SDL_Rect blit_rect = {
@@ -596,7 +596,7 @@ static void UpdateGrab(void)
 
 static void LimitTextureSize(int *w_upscale, int *h_upscale)
 {
-#ifndef CRISPY_CRT
+    #if CRISPY_OLD_RENDERING
     SDL_RendererInfo rinfo;
     int orig_w, orig_h;
 
@@ -661,12 +661,12 @@ static void LimitTextureSize(int *w_upscale, int *h_upscale)
                max_scaling_buffer_pixels,
                rinfo.max_texture_width, rinfo.max_texture_height);
     }
-#endif
+    #endif
 }
 
 static void CreateUpscaledTexture(boolean force)
 {
-#ifndef CRISPY_CRT
+    #if CRISPY_OLD_RENDERING
     int w, h;
     int h_upscale, w_upscale;
     static int h_upscale_old, w_upscale_old;
@@ -747,7 +747,7 @@ static void CreateUpscaledTexture(boolean force)
     {
         SDL_DestroyTexture(old_texture);
     }
-#endif
+    #endif
 }
 
 // [AM] Fractional part of the current tic, in the half-open
@@ -861,12 +861,12 @@ void I_FinishUpdate (void)
 
         if (vga_porch_flash)
         {
-#ifndef CRISPY_CRT
+            #if CRISPY_OLD_RENDERING
             // "flash" the pillars/letterboxes with palette changes, emulating
             // VGA "porch" behaviour (GitHub issue #832)
             SDL_SetRenderDrawColor(renderer, palette[0].r, palette[0].g,
                 palette[0].b, SDL_ALPHA_OPAQUE);
-#endif
+            #endif
         }
     }
 
@@ -876,7 +876,7 @@ void I_FinishUpdate (void)
     SDL_LowerBlit(screenbuffer, &blit_rect, argbbuffer, &blit_rect);
 #endif
 
-#ifndef CRISPY_CRT
+    #if CRISPY_OLD_RENDERING
     // Update the intermediate texture with the contents of the RGBA buffer.
 
     SDL_UpdateTexture(texture, NULL, argbbuffer->pixels, argbbuffer->pitch);
@@ -900,22 +900,24 @@ void I_FinishUpdate (void)
     }
     else
     {
-	SDL_SetRenderTarget(renderer, NULL);
-	SDL_RenderCopy(renderer, texture, NULL, NULL);
+    SDL_SetRenderTarget(renderer, NULL);
+    SDL_RenderCopy(renderer, texture, NULL, NULL);
     }
 
 #ifdef CRISPY_TRUECOLOR
     if (curpane)
     {
-	SDL_SetTextureAlphaMod(curpane, pane_alpha);
-	SDL_RenderCopy(renderer, curpane, NULL, NULL);
+    SDL_SetTextureAlphaMod(curpane, pane_alpha);
+    SDL_RenderCopy(renderer, curpane, NULL, NULL);
     }
 #endif
 
     // Draw!
 
     SDL_RenderPresent(renderer);
-#else
+
+    #else
+
     int windoww;
     int windowh;
 
@@ -933,6 +935,7 @@ void I_FinishUpdate (void)
 
     static Uint64 crt_us = 0;
 
+    // @Todo: Get rid of the need for this re-mapping of the pixel components.
     if(!dstpixels || (dstwidth != SCREENWIDTH || dstheight != SCREENHEIGHT))
     {
         if(dstpixels)
@@ -964,12 +967,13 @@ void I_FinishUpdate (void)
     crtemu_present(crtemu, crt_us, dstpixels, SCREENWIDTH, SCREENHEIGHT, 0xFFFFFF, 0x000000);
 
     SDL_GL_SwapWindow(screen);
-#endif
+
+    #endif
 
     // [AM] Figure out how far into the current tic we're in as a fixed_t.
     if (crispy->uncapped)
     {
-	fractionaltic = I_GetFracRealTime();
+        fractionaltic = I_GetFracRealTime();
     }
 
     // Restore background and undo the disk indicator, if it was drawn.
@@ -1446,9 +1450,7 @@ static void SetVideoMode(void)
     I_GetWindowPosition(&x, &y, w, h);
 
     // If we want to render with a CRT effect then we need to use OpenGL.
-    #ifdef CRISPY_CRT
     window_flags |= SDL_WINDOW_OPENGL;
-    #endif
 
     // Create window and renderer contexts. We set the window title
     // later anyway and leave the window position "undefined". If
@@ -1499,33 +1501,7 @@ static void SetVideoMode(void)
         crispy->vsync = false;
     }
 
-#ifdef CRISPY_CRT
-    if (glcontext != NULL)
-    {
-        SDL_GL_DeleteContext(glcontext);
-    }
-
-    glcontext = SDL_GL_CreateContext(screen);
-
-    if (glcontext == NULL)
-    {
-        I_Error("Error creating GL context for screen window: %s",
-                SDL_GetError());
-    }
-
-    if (crtemu != NULL)
-    {
-        crtemu_destroy(crtemu);
-    }
-
-    crtemu = crtemu_create(NULL);
-
-    if (crtemu == NULL)
-    {
-        I_Error("Error creating CRT emulation effect!");
-    }
-
-#else
+    #if CRISPY_OLD_RENDERING
     if (renderer != NULL)
     {
         SDL_DestroyRenderer(renderer);
@@ -1580,7 +1556,34 @@ static void SetVideoMode(void)
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
     SDL_RenderClear(renderer);
     SDL_RenderPresent(renderer);
-#endif
+
+    #else
+
+    if (glcontext != NULL)
+    {
+        SDL_GL_DeleteContext(glcontext);
+    }
+
+    glcontext = SDL_GL_CreateContext(screen);
+
+    if (glcontext == NULL)
+    {
+        I_Error("Error creating GL context for screen window: %s",
+                SDL_GetError());
+    }
+
+    if (crtemu != NULL)
+    {
+        crtemu_destroy(crtemu);
+    }
+
+    crtemu = crtemu_create(NULL);
+
+    if (crtemu == NULL)
+    {
+        I_Error("Error creating CRT emulation effect!");
+    }
+    #endif
 
 #ifndef CRISPY_TRUECOLOR
     // Create the 8-bit paletted and the 32-bit RGBA screenbuffer surfaces.
@@ -1632,7 +1635,7 @@ static void SetVideoMode(void)
         SDL_FillRect(argbbuffer, NULL, 0);
     }
 
-#ifndef CRISPY_CRT
+    #if CRISPY_OLD_RENDERING
     if (texture != NULL)
     {
         SDL_DestroyTexture(texture);
@@ -1652,7 +1655,7 @@ static void SetVideoMode(void)
                                 pixel_format,
                                 SDL_TEXTUREACCESS_STREAMING,
                                 SCREENWIDTH, SCREENHEIGHT);
-#endif
+    #endif
 
     // Workaround for SDL 2.0.14+ alt-tab bug (taken from Doom Retro via Prboom-plus and Woof)
 #if defined(_WIN32)
@@ -1884,81 +1887,81 @@ void I_ReInitGraphics (int reinit)
 #endif
 		V_RestoreBuffer();
 
-#ifndef CRISPY_CRT
-		// [crispy] it will get re-created below with the new resolution
-		SDL_DestroyTexture(texture);
-#endif
+        #if CRISPY_OLD_RENDERING
+        // [crispy] it will get re-created below with the new resolution
+        SDL_DestroyTexture(texture);
+        #endif
 	}
 
-#ifndef CRISPY_CRT
-	// [crispy] re-create renderer
-	if (reinit & REINIT_RENDERER)
-	{
-		SDL_RendererInfo info = {0};
-		int flags;
+    #if CRISPY_OLD_RENDERING
+    // [crispy] re-create renderer
+    if (reinit & REINIT_RENDERER)
+    {
+        SDL_RendererInfo info = {0};
+        int flags;
 
-		SDL_GetRendererInfo(renderer, &info);
-		flags = info.flags;
+        SDL_GetRendererInfo(renderer, &info);
+        flags = info.flags;
 
-		if (crispy->vsync && !(flags & SDL_RENDERER_SOFTWARE))
-		{
-			flags |= SDL_RENDERER_PRESENTVSYNC;
-		}
-		else
-		{
-			flags &= ~SDL_RENDERER_PRESENTVSYNC;
-		}
+        if (crispy->vsync && !(flags & SDL_RENDERER_SOFTWARE))
+        {
+            flags |= SDL_RENDERER_PRESENTVSYNC;
+        }
+        else
+        {
+            flags &= ~SDL_RENDERER_PRESENTVSYNC;
+        }
 
-		SDL_DestroyRenderer(renderer);
-		renderer = SDL_CreateRenderer(screen, -1, flags);
-		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+        SDL_DestroyRenderer(renderer);
+        renderer = SDL_CreateRenderer(screen, -1, flags);
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 
-		// [crispy] the texture gets destroyed in SDL_DestroyRenderer(), force its re-creation
-		texture_upscaled = NULL;
-	}
+        // [crispy] the texture gets destroyed in SDL_DestroyRenderer(), force its re-creation
+        texture_upscaled = NULL;
+    }
 
-	// [crispy] re-create textures
-	if (reinit & REINIT_TEXTURES)
-	{
-		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
+    // [crispy] re-create textures
+    if (reinit & REINIT_TEXTURES)
+    {
+        SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
 
-		texture = SDL_CreateTexture(renderer,
-		                            pixel_format,
-		                            SDL_TEXTUREACCESS_STREAMING,
-		                            SCREENWIDTH, SCREENHEIGHT);
+        texture = SDL_CreateTexture(renderer,
+                                    pixel_format,
+                                    SDL_TEXTUREACCESS_STREAMING,
+                                    SCREENWIDTH, SCREENHEIGHT);
 
-		// [crispy] force its re-creation
-		CreateUpscaledTexture(true);
-	}
+        // [crispy] force its re-creation
+        CreateUpscaledTexture(true);
+    }
 
-	// [crispy] re-set logical rendering resolution
-	if (reinit & REINIT_ASPECTRATIO)
-	{
-		if (aspect_ratio_correct == 1)
-		{
-			actualheight = 6 * SCREENHEIGHT / 5;
-		}
-		else
-		{
-			actualheight = SCREENHEIGHT;
-		}
+    // [crispy] re-set logical rendering resolution
+    if (reinit & REINIT_ASPECTRATIO)
+    {
+        if (aspect_ratio_correct == 1)
+        {
+            actualheight = 6 * SCREENHEIGHT / 5;
+        }
+        else
+        {
+            actualheight = SCREENHEIGHT;
+        }
 
-		if (aspect_ratio_correct || integer_scaling)
-		{
-			SDL_RenderSetLogicalSize(renderer,
-			                         SCREENWIDTH,
-			                         actualheight);
-		}
-		else
-		{
-			SDL_RenderSetLogicalSize(renderer, 0, 0);
-		}
+        if (aspect_ratio_correct || integer_scaling)
+        {
+            SDL_RenderSetLogicalSize(renderer,
+                                     SCREENWIDTH,
+                                     actualheight);
+        }
+        else
+        {
+            SDL_RenderSetLogicalSize(renderer, 0, 0);
+        }
 
-		#if SDL_VERSION_ATLEAST(2, 0, 5)
-		SDL_RenderSetIntegerScale(renderer, integer_scaling);
-		#endif
-	}
-#endif
+        #if SDL_VERSION_ATLEAST(2, 0, 5)
+        SDL_RenderSetIntegerScale(renderer, integer_scaling);
+        #endif
+    }
+    #endif
 
 	// [crispy] adjust the window size and re-set the palette
 	need_resize = true;
@@ -1968,7 +1971,7 @@ void I_ReInitGraphics (int reinit)
 
 void I_RenderReadPixels(byte **data, int *w, int *h, int *p)
 {
-#ifndef CRISPY_CRT
+    #if CRISPY_OLD_RENDERING
 	SDL_Rect rect;
 	SDL_PixelFormat *format;
 	int temp;
@@ -2046,7 +2049,7 @@ void I_RenderReadPixels(byte **data, int *w, int *h, int *p)
 	*p = temp;
 
 	SDL_FreeFormat(format);
-#endif
+    #endif
 }
 
 // Bind all variables controlling video options into the configuration
