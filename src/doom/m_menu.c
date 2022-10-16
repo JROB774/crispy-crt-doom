@@ -1505,6 +1505,8 @@ static void M_DrawCrispness1(void)
 
     M_DrawCrispnessHeader("Crispness 1/4");
 
+    // @Todo: Fix the menu navigation buttons going off screen...
+
     M_DrawCrispnessSeparator(crispness_sep_rendering, "Rendering");
     M_DrawCrispnessItem(crispness_hires, "High Resolution Rendering", crispy->hires, true);
     M_DrawCrispnessMultiItem(crispness_widescreen, "Widescreen Aspect Ratio", multiitem_widescreen, crispy->widescreen, aspect_ratio_correct == 1);
