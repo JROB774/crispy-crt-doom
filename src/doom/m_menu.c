@@ -253,6 +253,7 @@ static void M_DrawCrispness1(void);
 static void M_DrawCrispness2(void);
 static void M_DrawCrispness3(void);
 static void M_DrawCrispness4(void);
+static void M_DrawCrispness5(void);
 
 
 
@@ -439,7 +440,6 @@ enum
     crispness_uncapped,
     crispness_vsync,
     crispness_smoothscaling,
-    crispness_crteffect,
     crispness_sep_rendering_,
 
     crispness_sep_visual,
@@ -464,7 +464,6 @@ static menuitem_t Crispness1Menu[]=
     {1,"",	M_CrispyToggleUncapped,'u'},
     {1,"",	M_CrispyToggleVsync,'v'},
     {1,"",	M_CrispyToggleSmoothScaling,'s'},
-    {1,"",  M_CrispyToggleCRTEffect,'c'},
     {-1,"",0,'\0'},
     {-1,"",0,'\0'},
     {1,"",	M_CrispyToggleColoredhud,'c'},
@@ -646,12 +645,44 @@ static menu_t  Crispness4Def =
     1
 };
 
+// [crispy] Crispness menu
+enum
+{
+    crispness_sep_special,
+    crispness_crteffect,
+    crispness_sep_special_,
+
+    crispness5_next,
+    crispness5_prev,
+    crispness5_end
+} crispness5_e;
+
+static menuitem_t Crispness5Menu[]=
+{
+    {-1,"",0,'\0'},
+    {1,"",  M_CrispyToggleCRTEffect,'c'},
+    {-1,"",0,'\0'},
+    {1,"",  M_CrispnessNext,'n'},
+    {1,"",  M_CrispnessPrev,'p'},
+};
+
+static menu_t  Crispness5Def =
+{
+    crispness5_end,
+    &OptionsDef,
+    Crispness5Menu,
+    M_DrawCrispness5,
+    48,28,
+    1
+};
+
 static menu_t *CrispnessMenus[] =
 {
 	&Crispness1Def,
 	&Crispness2Def,
 	&Crispness3Def,
 	&Crispness4Def,
+    &Crispness5Def,
 };
 
 static int crispness_cur;
@@ -1503,9 +1534,7 @@ static void M_DrawCrispness1(void)
 {
     M_DrawCrispnessBackground();
 
-    M_DrawCrispnessHeader("Crispness 1/4");
-
-    // @Todo: Fix the menu navigation buttons going off screen...
+    M_DrawCrispnessHeader("Crispness 1/5");
 
     M_DrawCrispnessSeparator(crispness_sep_rendering, "Rendering");
     M_DrawCrispnessItem(crispness_hires, "High Resolution Rendering", crispy->hires, true);
@@ -1513,7 +1542,6 @@ static void M_DrawCrispness1(void)
     M_DrawCrispnessItem(crispness_uncapped, "Uncapped Framerate", crispy->uncapped, true);
     M_DrawCrispnessItem(crispness_vsync, "Enable VSync", crispy->vsync, !force_software_renderer);
     M_DrawCrispnessItem(crispness_smoothscaling, "Smooth Pixel Scaling", crispy->smoothscaling, true);
-    M_DrawCrispnessItem(crispness_crteffect, "CRT Effect", crispy->crteffect, !force_software_renderer);
 
     M_DrawCrispnessSeparator(crispness_sep_visual, "Visual");
     M_DrawCrispnessMultiItem(crispness_coloredhud, "Colorize HUD Elements", multiitem_coloredhud, crispy->coloredhud, true);
@@ -1533,7 +1561,7 @@ static void M_DrawCrispness2(void)
 {
     M_DrawCrispnessBackground();
 
-    M_DrawCrispnessHeader("Crispness 2/4");
+    M_DrawCrispnessHeader("Crispness 2/5");
 
     M_DrawCrispnessSeparator(crispness_sep_audible, "Audible");
     M_DrawCrispnessItem(crispness_soundfull, "Play sounds in full length", crispy->soundfull, true);
@@ -1560,7 +1588,7 @@ static void M_DrawCrispness3(void)
 {
     M_DrawCrispnessBackground();
 
-    M_DrawCrispnessHeader("Crispness 3/4");
+    M_DrawCrispnessHeader("Crispness 3/5");
 
     M_DrawCrispnessSeparator(crispness_sep_tactical, "Tactical");
 
@@ -1589,7 +1617,7 @@ static void M_DrawCrispness4(void)
 {
     M_DrawCrispnessBackground();
 
-    M_DrawCrispnessHeader("Crispness 4/4");
+    M_DrawCrispnessHeader("Crispness 4/5");
 
     M_DrawCrispnessSeparator(crispness_sep_physical, "Physical");
 
@@ -1604,8 +1632,23 @@ static void M_DrawCrispness4(void)
     M_DrawCrispnessItem(crispness_demobar, "Show Demo Progress Bar", crispy->demobar, true);
     M_DrawCrispnessItem(crispness_demousetimer, "\"Use\" Button Timer", crispy->btusetimer, true);
 
-    M_DrawCrispnessGoto(crispness4_next, "First Page >");
+    M_DrawCrispnessGoto(crispness4_next, "Next Page >");
     M_DrawCrispnessGoto(crispness4_prev, "< Prev Page");
+
+    dp_translation = NULL;
+}
+
+static void M_DrawCrispness5(void)
+{
+    M_DrawCrispnessBackground();
+
+    M_DrawCrispnessHeader("Crispness 5/5");
+
+    M_DrawCrispnessSeparator(crispness_sep_special, "Special");
+    M_DrawCrispnessItem(crispness_crteffect, "CRT Effect", crispy->crteffect, !force_software_renderer);
+
+    M_DrawCrispnessGoto(crispness5_next, "First Page >");
+    M_DrawCrispnessGoto(crispness5_prev, "< Last Page");
 
     dp_translation = NULL;
 }
