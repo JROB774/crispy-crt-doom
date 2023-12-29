@@ -107,12 +107,9 @@ boolean		devparm;	// started game with -devparm
 boolean         nomonsters;	// checkparm of -nomonsters
 boolean         respawnparm;	// checkparm of -respawn
 boolean         fastparm;	// checkparm of -fast
+boolean         coop_spawns = false;	// [crispy] checkparm of -coop_spawns
 
-//extern int soundVolume;
-//extern  int	sfxVolume;
-//extern  int	musicVolume;
 
-extern  boolean	inhelpscreens;
 
 skill_t		startskill;
 int             startepisode;
@@ -127,9 +124,6 @@ boolean         storedemo;
 
 // If true, the main game loop has started.
 boolean         main_loop_started = false;
-
-char		wadfile[1024];		// primary wad file
-char		mapdir[1024];           // directory of development maps
 
 int             show_endoom = 0; // [crispy] disable
 int             show_diskicon = 1;
@@ -169,9 +163,6 @@ void D_ProcessEvents (void)
 
 // wipegamestate can be set to -1 to force a wipe on the next draw
 gamestate_t     wipegamestate = GS_DEMOSCREEN;
-extern  boolean setsizeneeded;
-extern  int             showMessages;
-void R_ExecuteSetViewSize (void);
 
 boolean D_Display (void)
 {
@@ -462,8 +453,10 @@ void D_BindVariables(void)
     M_BindIntVariable("crispy_demotimerdir",    &crispy->demotimerdir);
     M_BindIntVariable("crispy_extautomap",      &crispy->extautomap);
     M_BindIntVariable("crispy_flipcorpses",     &crispy->flipcorpses);
+    M_BindIntVariable("crispy_fpslimit",        &crispy->fpslimit);
     M_BindIntVariable("crispy_freeaim",         &crispy->freeaim);
     M_BindIntVariable("crispy_freelook",        &crispy->freelook);
+    M_BindIntVariable("crispy_gamma",           &crispy->gamma);
     M_BindIntVariable("crispy_hires",           &crispy->hires);
     M_BindIntVariable("crispy_jump",            &crispy->jump);
     M_BindIntVariable("crispy_leveltime",       &crispy->leveltime);
@@ -522,6 +515,7 @@ void D_RunFrame()
     int tics;
     static int wipestart;
     static boolean wipe;
+    static int oldgametic;
 
     if (wipe)
     {
@@ -546,7 +540,11 @@ void D_RunFrame()
 
     TryRunTics (); // will run at least one tic
 
-    S_UpdateSounds (players[displayplayer].mo);// move positional sounds
+    if (oldgametic < gametic)
+    {
+        S_UpdateSounds (players[displayplayer].mo);// move positional sounds
+        oldgametic = gametic;
+    }
 
     // Update display, next frame, with current state if no profiling is on
     if (screenvisible && !nodrawers)
@@ -1441,7 +1439,6 @@ void D_DoomMain (void)
     int p;
     char file[256];
     char demolumpname[9] = {0};
-    int numiwadlumps;
 
     // [crispy] unconditionally initialize DEH tables
     DEH_Init();
@@ -1623,9 +1620,7 @@ void D_DoomMain (void)
     if ( (p=M_CheckParm ("-turbo")) )
     {
 	int     scale = 200;
-	extern int forwardmove[2];
-	extern int sidemove[2];
-
+	
 	if (p<myargc-1)
 	    scale = atoi (myargv[p+1]);
 	if (scale < 10)
@@ -1667,7 +1662,6 @@ void D_DoomMain (void)
 
     DEH_printf("W_Init: Init WADfiles.\n");
     D_AddFile(iwadfile);
-    numiwadlumps = numlumps;
 
     W_CheckCorrectIWAD(doom);
 
@@ -1749,7 +1743,6 @@ void D_DoomMain (void)
 
     //!
     // @category game
-    // @category mod
     //
     // Automatic pistol start when advancing from one level to the next. At the
     // beginning of each level, the player's health is reset to 100, their
@@ -1762,7 +1755,6 @@ void D_DoomMain (void)
 
     //!
     // @category game
-    // @category mod
     //
     // Double ammo pickup rate. This option is not allowed when recording a
     // demo, playing back a demo or when starting a network game.
@@ -1988,6 +1980,13 @@ void D_DoomMain (void)
     W_GenerateHashTable();
 
     // [crispy] allow overriding of special-casing
+
+    //!
+    // @category mod
+    //
+    // Disable automatic loading of Master Levels, No Rest for the Living and
+    // Sigil.
+    //
     if (!M_ParmExists("-nosideload") && gamemode != shareware && !demolumpname[0])
     {
 	if (gamemode == retail &&
@@ -2008,16 +2007,22 @@ void D_DoomMain (void)
     // Load DEHACKED lumps from WAD files - but only if we give the right
     // command line parameter.
 
+    // [crispy] load DEHACKED lumps by default, but allow overriding
+
     //!
     // @category mod
     //
-    // Load Dehacked patches from DEHACKED lumps contained in one of the
-    // loaded PWAD files.
+    // Disable automatic loading of embedded DEHACKED lumps in wad files.
     //
-    // [crispy] load DEHACKED lumps by default, but allow overriding
     if (!M_ParmExists("-nodehlump") && !M_ParmExists("-nodeh"))
     {
         int i, loaded = 0;
+        int numiwadlumps = numlumps;
+
+        while (!W_IsIWADLump(lumpinfo[numiwadlumps - 1]))
+        {
+            numiwadlumps--;
+        }
 
         for (i = numiwadlumps; i < numlumps; ++i)
         {
@@ -2106,7 +2111,7 @@ void D_DoomMain (void)
     I_CheckIsScreensaver();
     I_InitTimer();
     I_InitJoystick();
-    I_InitSound(true);
+    I_InitSound(doom);
     I_InitMusic();
 
     // [crispy] check for SSG resources
@@ -2358,6 +2363,19 @@ void D_DoomMain (void)
     {
         I_AtExit(StatDump, true);
         DEH_printf("External statistics registered.\n");
+    }
+
+    //!
+    // @category game
+    //
+    // Start single player game with items spawns as in cooperative netgame.
+    //
+
+    p = M_ParmExists("-coop_spawns");
+
+    if (p)
+    {
+        coop_spawns = true;
     }
 
     //!

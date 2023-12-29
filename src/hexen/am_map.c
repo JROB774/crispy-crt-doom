@@ -33,8 +33,6 @@
 int cheating = 0;
 static int grid = 0;
 
-static int leveljuststarted = 1;        // kluge until AM_LevelInit() is called
-
 boolean automapactive = false;
 static int finit_width;// = SCREENWIDTH;
 static int finit_height;// = SCREENHEIGHT - SBARHEIGHT - (3 << crispy->hires);
@@ -129,10 +127,6 @@ void AM_rotate(fixed_t* x, fixed_t* y, angle_t a);
 static void AM_rotatePoint(mpoint_t *pt);
 static mpoint_t mapcenter;
 static angle_t mapangle;
-
-// [AM] Fractional part of the current tic, in the half-open
-//      range of [0.0, 1.0).  Used for interpolation.
-extern fixed_t          fractionaltic;
 
 //byte screens[][SCREENWIDTH*SCREENHEIGHT];
 //void V_MarkRect (int x, int y, int width, int height);
@@ -459,8 +453,6 @@ void AM_LevelInit(boolean reinit)
 {
     // [crispy] Used for reinit
     static int f_h_old;
-
-    leveljuststarted = 0;
 
     finit_width = SCREENWIDTH;
     finit_height = SCREENHEIGHT - ((ORIGSBARHEIGHT + 3) << crispy->hires);
@@ -1814,6 +1806,7 @@ void AM_Drawer(void)
     if (!crispy->automapoverlay)
     {
         AM_clearFB(BACKGROUND);
+        pspr_interp = false; // [crispy]
     }
     if (grid)
         AM_drawGrid(GRIDCOLORS);
@@ -1951,7 +1944,7 @@ static void DrawWorldTimer(void)
 
     M_snprintf(timeBuffer, sizeof(timeBuffer),
                "%.2d : %.2d : %.2d", hours, minutes, seconds);
-    MN_DrTextA(timeBuffer, 240, 8);
+    MN_DrTextA(timeBuffer, 240 + WIDESCREENDELTA, 8 + right_widget_h);
 
     if (days)
     {
@@ -1963,10 +1956,10 @@ static void DrawWorldTimer(void)
         {
             M_snprintf(dayBuffer, sizeof(dayBuffer), "%.2d DAYS", days);
         }
-        MN_DrTextA(dayBuffer, 240, 20);
+        MN_DrTextA(dayBuffer, 240 + WIDESCREENDELTA, 20 + right_widget_h);
         if (days >= 5)
         {
-            MN_DrTextA("YOU FREAK!!!", 230, 35);
+            MN_DrTextA("YOU FREAK!!!", 230, 35 + right_widget_h);
         }
     }
 }

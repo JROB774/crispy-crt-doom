@@ -62,10 +62,6 @@ lighttable_t *scalelight[LIGHTLEVELS][MAXLIGHTSCALE];
 lighttable_t *scalelightfixed[MAXLIGHTSCALE];
 lighttable_t *zlight[LIGHTLEVELS][MAXLIGHTZ];
 
-// [AM] Fractional part of the current tic, in the half-open
-//      range of [0.0, 1.0).  Used for interpolation.
-extern fixed_t          fractionaltic;
-
 int extralight;                 // bumped light from gun blasts
 
 void (*colfunc) (void);
@@ -313,6 +309,9 @@ void R_InitPointToAngle(void)
 
 //=============================================================================
 
+// [crispy] WiggleFix: move R_ScaleFromGlobalAngle function to r_segs.c, above
+// R_StoreWallRange
+#if 0
 /*
 ================
 =
@@ -364,6 +363,7 @@ fixed_t R_ScaleFromGlobalAngle(angle_t visangle)
 
     return scale;
 }
+#endif
 
 
 // [AM] Interpolate between two angles.
@@ -702,6 +702,8 @@ void R_ExecuteSetViewSize(void)
 
     // [crispy] Redraw status bar needed for widescreen HUD
     SB_ForceRedraw();
+
+    pspr_interp = false; // [crispy]
 }
 
 
@@ -898,7 +900,6 @@ void R_SetupFrame(player_t * player)
 void R_RenderPlayerView(player_t * player)
 {
     extern void PO_InterpolatePolyObjects(void);
-    extern void R_InterpolateTextureOffset(void);
     extern boolean automapactive;
 
     R_SetupFrame(player);
@@ -915,7 +916,7 @@ void R_RenderPlayerView(player_t * player)
 
     NetUpdate();                // check for new console commands
     PO_InterpolatePolyObjects(); // [crispy] Interpolate polyobjects here
-    R_InterpolateTextureOffset(); // [crispy] Smooth texture scrolling
+    R_InterpolateTextureOffsets(); // [crispy] Smooth texture scrolling
 
     // Make displayed player invisible locally
     if (localQuakeHappening[displayplayer] && gamestate == GS_LEVEL)

@@ -519,6 +519,7 @@ void R_InitSpriteLumps(void)
 
 void R_InitColormaps(void)
 {
+#ifndef CRISPY_TRUECOLOR
     int lump, length;
 //
 // load in the light tables
@@ -528,6 +529,62 @@ void R_InitColormaps(void)
     length = W_LumpLength(lump);
     colormaps = Z_Malloc(length, PU_STATIC, 0);
     W_ReadLump(lump, colormaps);
+#else
+	byte *playpal;
+	byte *const colormap = W_CacheLumpName("COLORMAP", PU_STATIC);
+	int c, i, j = 0;
+	byte r, g, b;
+
+	playpal = W_CacheLumpName("PLAYPAL", PU_STATIC);
+
+	if (!colormaps)
+	{
+		colormaps = (lighttable_t*) Z_Malloc((NUMCOLORMAPS + 1) * 256 * sizeof(lighttable_t), PU_STATIC, 0);
+	}
+
+	if (crispy->truecolor)
+	{
+		for (c = 0; c < NUMCOLORMAPS; c++)
+		{
+			const float scale = 1. * c / NUMCOLORMAPS;
+
+			for (i = 0; i < 256; i++)
+			{
+				r = gamma2table[crispy->gamma][playpal[3 * i + 0]] * (1. - scale) + gamma2table[crispy->gamma][0] * scale;
+				g = gamma2table[crispy->gamma][playpal[3 * i + 1]] * (1. - scale) + gamma2table[crispy->gamma][0] * scale;
+				b = gamma2table[crispy->gamma][playpal[3 * i + 2]] * (1. - scale) + gamma2table[crispy->gamma][0] * scale;
+
+				colormaps[j++] = 0xff000000 | (r << 16) | (g << 8) | b;
+			}
+		}
+	}
+	else
+	{
+		for (c = 0; c < NUMCOLORMAPS; c++)
+		{
+			for (i = 0; i < 256; i++)
+			{
+				r = gamma2table[crispy->gamma][playpal[3 * colormap[c * 256 + i] + 0]] & ~3;
+				g = gamma2table[crispy->gamma][playpal[3 * colormap[c * 256 + i] + 1]] & ~3;
+				b = gamma2table[crispy->gamma][playpal[3 * colormap[c * 256 + i] + 2]] & ~3;
+
+				colormaps[j++] = 0xff000000 | (r << 16) | (g << 8) | b;
+			}
+		}
+	}
+
+	// [crispy] Invulnerability (c == COLORMAPS), generated from COLORMAP lump
+	for (i = 0; i < 256; i++)
+	{
+		r = gamma2table[crispy->gamma][playpal[3 * colormap[c * 256 + i] + 0]] & ~3;
+		g = gamma2table[crispy->gamma][playpal[3 * colormap[c * 256 + i] + 1]] & ~3;
+		b = gamma2table[crispy->gamma][playpal[3 * colormap[c * 256 + i] + 2]] & ~3;
+
+		colormaps[j++] = 0xff000000 | (r << 16) | (g << 8) | b;
+	}
+
+	W_ReleaseLumpName("COLORMAP");
+#endif
 
     // [crispy] initialize color translation and color string tables
     {
@@ -553,6 +610,26 @@ void R_InitColormaps(void)
 	W_ReleaseLumpName("PLAYPAL");
     }
 }
+
+#ifdef CRISPY_TRUECOLOR
+// [crispy] Changes palette to given one. Used exclusively in true color rendering
+// for proper drawing of E2END pic in F_DrawUnderwater. Changing palette back to
+// original PLAYPAL for restoring proper colors will be done in R_InitColormaps.
+void R_SetUnderwaterPalette(byte *palette)
+{
+    int i, j = 0;
+    byte r, g, b;
+
+    for (i = 0; i < 256; i++)
+    {
+        r = gamma2table[crispy->gamma][palette[3 * i + 0]] + gamma2table[crispy->gamma][0];
+        g = gamma2table[crispy->gamma][palette[3 * i + 1]] + gamma2table[crispy->gamma][0];
+        b = gamma2table[crispy->gamma][palette[3 * i + 2]] + gamma2table[crispy->gamma][0];
+
+        colormaps[j++] = 0xff000000 | (r << 16) | (g << 8) | b;
+    }
+}
+#endif
 
 
 /*
@@ -585,6 +662,8 @@ void R_InitData(void)
     R_InitSpriteLumps();
     IncThermo();
     printf (".");
+    // [crispy] Initialize and generate gamma-correction levels.
+    I_SetGammaTable();
     R_InitColormaps();
 }
 
@@ -656,7 +735,11 @@ int R_TextureNumForName(const char *name)
 
     i = R_CheckTextureNumForName(name);
     if (i == -1)
-        I_Error("R_TextureNumForName: %s not found", name);
+    {
+        // [crispy] make missing texture non-fatal
+        printf("R_TextureNumForName: %.8s not found\n", name);
+        return 0;
+    }
 
     return i;
 }

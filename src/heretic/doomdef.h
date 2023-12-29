@@ -127,8 +127,11 @@ typedef enum
 ===============================================================================
 */
 
+
+struct thinker_s;
+
 // think_t is a function pointer to a routine to handle an actor
-typedef void (*think_t) ();
+typedef void (*think_t) (struct thinker_s *);
 
 typedef struct thinker_s
 {
@@ -305,6 +308,7 @@ typedef struct pspdef_s
     state_t *state;             // a NULL state means not active
     int tics;
     fixed_t sx, sy;
+    fixed_t sx2, sy2; // [crispy] variable weapon sprite bob
 } pspdef_t;
 
 typedef enum
@@ -484,7 +488,10 @@ typedef struct player_s
 
     // [AM] Previous position of viewz before think.
     //      Used to interpolate between camera positions.
-    angle_t		oldviewz;
+    fixed_t		oldviewz;
+
+    // [crispy] variable player view bob
+    fixed_t bob2;
 } player_t;
 
 #define CF_NOCLIP		1
@@ -524,9 +531,15 @@ extern boolean usergame;        // ok to save / end game
 
 extern boolean ravpic;          // checkparm of -ravpic
 
+extern boolean coop_spawns;     // [crispy] checkparm of -coop_spawns
+
 extern boolean altpal;          // checkparm to use an alternate palette routine
 
 extern boolean cdrom;           // true if cd-rom mode active ("-cdrom")
+
+extern boolean noartiskip;      // whether shift-enter skips an artifact
+
+extern boolean viewactive;
 
 extern boolean deathmatch;      // only if started as net death
 
@@ -743,6 +756,8 @@ void G_ScreenShot(void);
 //PLAY
 //-----
 
+extern lumpinfo_t *maplumpinfo;
+
 void P_Ticker(void);
 // called by C_Ticker
 // can call G_PlayerExited
@@ -846,10 +861,12 @@ void F_StartFinale(void);
 // STATUS BAR (SB_bar.c)
 //----------------------
 
+#define CURPOS_MAX 6 // [crispy] 7 total artifact frames
 
 extern boolean inventory;
 extern int curpos;
 extern int inv_ptr;
+extern int playerkeys;
 
 
 void SB_Init(void);

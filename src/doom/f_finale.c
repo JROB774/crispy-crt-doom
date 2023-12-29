@@ -246,7 +246,6 @@ void F_Ticker (void)
 //
 
 #include "hu_stuff.h"
-extern	patch_t *hu_font[HU_FONTSIZE];
 
 // [crispy] add line breaks for lines exceeding screenwidth
 static inline boolean F_AddLineBreak (char *c)
@@ -273,7 +272,7 @@ void F_TextWrite (void)
     byte*	src;
     pixel_t*	dest;
     
-    int		x,y,w;
+    int		w;
     signed int	count;
     char *ch; // [crispy] un-const
     int		c;
@@ -284,26 +283,8 @@ void F_TextWrite (void)
     src = W_CacheLumpName ( finaleflat , PU_CACHE);
     dest = I_VideoBuffer;
 	
-    for (y=0 ; y<SCREENHEIGHT ; y++)
-    {
-#ifndef CRISPY_TRUECOLOR
-	for (x=0 ; x<SCREENWIDTH/64 ; x++)
-	{
-	    memcpy (dest, src+((y&63)<<6), 64);
-	    dest += 64;
-	}
-	if (SCREENWIDTH&63)
-	{
-	    memcpy (dest, src+((y&63)<<6), SCREENWIDTH&63);
-	    dest += (SCREENWIDTH&63);
-	}
-#else
-	for (x=0 ; x<SCREENWIDTH ; x++)
-	{
-		*dest++ = colormaps[src[((y&63)<<6) + (x&63)]];
-	}
-#endif
-    }
+    // [crispy] use unified flat filling function
+    V_FillFlat(0, SCREENHEIGHT, 0, SCREENWIDTH, src, dest);
 
     V_MarkRect (0, 0, SCREENWIDTH, SCREENHEIGHT);
     
@@ -328,7 +309,7 @@ void F_TextWrite (void)
 	}
 		
 	c = toupper(c) - HU_FONTSTART;
-	if (c < 0 || c> HU_FONTSIZE)
+	if (c < 0 || c >= HU_FONTSIZE)
 	{
 	    cx += 4;
 	    continue;
@@ -795,7 +776,7 @@ void F_CastPrint (const char *text)
 	if (!c)
 	    break;
 	c = toupper(c) - HU_FONTSTART;
-	if (c < 0 || c> HU_FONTSIZE)
+	if (c < 0 || c >= HU_FONTSIZE)
 	{
 	    width += 4;
 	    continue;
@@ -814,7 +795,7 @@ void F_CastPrint (const char *text)
 	if (!c)
 	    break;
 	c = toupper(c) - HU_FONTSTART;
-	if (c < 0 || c> HU_FONTSIZE)
+	if (c < 0 || c >= HU_FONTSIZE)
 	{
 	    cx += 4;
 	    continue;

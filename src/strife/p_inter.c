@@ -71,7 +71,7 @@ boolean P_GiveAmmo(player_t* player, ammotype_t ammo, int num)
     if(ammo == am_noammo)
         return false;
 
-    if(ammo > NUMAMMO)
+    if(ammo >= NUMAMMO)
         I_Error ("P_GiveAmmo: bad type %i", ammo);
 
     if(player->ammo[ammo] == player->maxammo[ammo])
@@ -367,6 +367,12 @@ boolean P_GivePower(player_t* player, powertype_t power)
         player->psprites[ps_targleft  ].sy  = (100*FRACUNIT);
         player->psprites[ps_targcenter].sy  = (100*FRACUNIT);
         player->psprites[ps_targright ].sy  = (100*FRACUNIT);
+
+        // [crispy] update targeter position
+        player->psprites[ps_targcenter].sx2 = player->psprites[ps_targcenter].sx;
+        player->psprites[ps_targleft  ].sy2 = player->psprites[ps_targleft  ].sy;
+        player->psprites[ps_targcenter].sy2 = player->psprites[ps_targcenter].sy;
+        player->psprites[ps_targright ].sy2 = player->psprites[ps_targright ].sy;
         return true;
     }
 
@@ -421,6 +427,10 @@ boolean P_GivePower(player_t* player, powertype_t power)
 
     case NUMPOWERS:
         // This should never actually happen
+        break;
+
+    // [crispy] showfps widget
+    case pw_showfps:
         break;
     }
 

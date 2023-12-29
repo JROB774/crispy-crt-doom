@@ -37,6 +37,7 @@
 #include "p_local.h"
 #include "w_wad.h"
 #include "z_zone.h"
+#include "g_game.h" // [crispy] demo_gotonextlvl
 
 // when to clip out sounds
 // Does not fit the large outdoor areas.
@@ -378,23 +379,30 @@ void S_Start(void)
 
     if (gamemode == commercial)
     {
-        const int nmus[] =
+        const int nmus[9][2] =
         {
-            mus_messag,
-            mus_ddtblu,
-            mus_doom,
-            mus_shawn,
-            mus_in_cit,
-            mus_the_da,
-            mus_in_cit,
-            mus_shawn2,
-            mus_ddtbl2,
+            {mus_nrftl1, mus_messag},
+            {mus_nrftl2, mus_ddtblu},
+            {mus_nrftl3, mus_doom},
+            {mus_nrftl4, mus_shawn},
+            {mus_nrftl5, mus_in_cit},
+            {mus_nrftl6, mus_the_da},
+            {mus_nrftl7, mus_in_cit},
+            {mus_nrftl8, mus_shawn2},
+            {mus_nrftl9, mus_ddtbl2},
         };
 
         if ((gameepisode == 2 || gamemission == pack_nerve) &&
             gamemap <= arrlen(nmus))
         {
-            mnum = nmus[gamemap - 1];
+            char name[9];
+
+            mnum = nmus[gamemap - 1][0];
+            M_snprintf(name, sizeof(name), "d_%s", S_music[mnum].name);
+            if (W_CheckNumForName(name) == -1)
+            {
+                mnum = nmus[gamemap - 1][1];
+            }
         }
         else
         mnum = mus_runnin + gamemap - 1;
@@ -440,7 +448,7 @@ void S_Start(void)
     {
 	const short curmap = (gameepisode << 8) + gamemap;
 
-	if (prevmap == curmap || (nodrawers && singletics))
+	if (prevmap == curmap || (nodrawers && singletics && !demo_gotonextlvl))
 	    return;
 
 	prevmap = curmap;
@@ -933,7 +941,7 @@ void S_ChangeMusic(int musicnum, int looping)
     musinfo.current_item = -1;
 
     // [crispy] play no music if this is not the right map
-    if (nodrawers && singletics)
+    if (nodrawers && singletics && !demo_gotonextlvl)
 	return;
 
     // [crispy] restart current music if IDMUS00 is entered
@@ -1096,7 +1104,7 @@ void S_StopMusic(void)
 }
 
 // [crispy] variable number of sound channels
-void S_UpdateSndChannels (void)
+void S_UpdateSndChannels (int choice)
 {
 	int i;
 
@@ -1108,10 +1116,22 @@ void S_UpdateSndChannels (void)
 		}
 	}
 
-	snd_channels <<= 1;
+	if (choice)
+	{
+		snd_channels <<= 1;
+	}
+	else
+	{
+		snd_channels >>= 1;
+	}
+
 	if (snd_channels > 32)
 	{
 		snd_channels = 8;
+	}
+	else if (snd_channels < 8)
+	{
+		snd_channels = 32;
 	}
 
 	channels = I_Realloc(channels, snd_channels * sizeof(channel_t));

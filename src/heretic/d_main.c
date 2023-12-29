@@ -65,6 +65,7 @@ boolean nomonsters;             // checkparm of -nomonsters
 boolean respawnparm;            // checkparm of -respawn
 boolean debugmode;              // checkparm of -debug
 boolean ravpic;                 // checkparm of -ravpic
+boolean coop_spawns = false;    // [crispy] checkparm of -coop_spawns
 boolean cdrom;                  // true if cd-rom mode active
 boolean noartiskip;             // whether shift-enter skips an artifact
 
@@ -165,7 +166,6 @@ void DrawCenterMessage(void)
 //---------------------------------------------------------------------------
 
 int left_widget_w, right_widget_w; // [crispy]
-extern int screenblocks; // [crispy]
 
 static void CrispyDrawStats (void)
 {
@@ -395,6 +395,7 @@ void D_DoomLoop(void)
 
     while (1)
     {
+        static int oldgametic;
         // Frame syncronous IO operations
         I_StartFrame();
 
@@ -402,8 +403,12 @@ void D_DoomLoop(void)
         // Will run at least one tic
         TryRunTics();
 
-        // Move positional sounds
-        S_UpdateSounds(players[consoleplayer].mo);
+        if (oldgametic < gametic)
+        {
+            // Move positional sounds
+            S_UpdateSounds(players[consoleplayer].mo);
+            oldgametic = gametic;
+        }
         D_Display();
 
         // [crispy] post-rendering function pointer to apply config changes
@@ -861,12 +866,20 @@ void D_BindVariables(void)
     M_BindIntVariable("crispy_automaprotate",   &crispy->automaprotate);
     M_BindIntVariable("crispy_automapstats",    &crispy->automapstats);
     M_BindIntVariable("crispy_brightmaps",      &crispy->brightmaps);
+    M_BindIntVariable("crispy_bobfactor",       &crispy->bobfactor);
+    M_BindIntVariable("crispy_centerweapon",    &crispy->centerweapon);
     M_BindIntVariable("crispy_defaultskill",    &crispy->defaultskill);
+    M_BindIntVariable("crispy_fpslimit",        &crispy->fpslimit);
     M_BindIntVariable("crispy_freelook",        &crispy->freelook_hh);
+    M_BindIntVariable("crispy_gamma",           &crispy->gamma);
     M_BindIntVariable("crispy_leveltime",       &crispy->leveltime);
     M_BindIntVariable("crispy_mouselook",       &crispy->mouselook);
     M_BindIntVariable("crispy_playercoords",    &crispy->playercoords);
     M_BindIntVariable("crispy_secretmessage",   &crispy->secretmessage);
+    M_BindIntVariable("crispy_soundmono",       &crispy->soundmono);
+#ifdef CRISPY_TRUECOLOR
+    M_BindIntVariable("crispy_truecolor",       &crispy->truecolor);
+#endif
     M_BindIntVariable("crispy_uncapped",        &crispy->uncapped);
     M_BindIntVariable("crispy_vsync",           &crispy->vsync);
     M_BindIntVariable("crispy_widescreen",      &crispy->widescreen);
@@ -1084,7 +1097,6 @@ void D_DoomMain(void)
 
     //!
     // @category game
-    // @category mod
     //
     // Automatic wand start when advancing from one level to the next. At the
     // beginning of each level, the player's health is reset to 100, their
@@ -1097,7 +1109,6 @@ void D_DoomMain(void)
 
     //!
     // @category game
-    // @category mod
     //
     // Ammo pickups give 50% more ammo. This option is not allowed when recording a
     // demo, playing back a demo or when starting a network game.
@@ -1107,7 +1118,6 @@ void D_DoomMain(void)
 
     //!
     // @category game
-    // @category mod
     //
     // Fast monsters. This option is not allowed when recording a demo,
     // playing back a demo or when starting a network game.
@@ -1117,7 +1127,6 @@ void D_DoomMain(void)
 
     //!
     // @category game
-    // @category mod
     //
     // Automatic use of Quartz flasks and Mystic urns.
     //
@@ -1126,7 +1135,6 @@ void D_DoomMain(void)
 
     //!
     // @category game
-    // @category mod
     //
     // Show the location of keys on the automap.
     //
@@ -1179,6 +1187,11 @@ void D_DoomMain(void)
                 }
             }
         }
+    }
+
+    if (W_CheckNumForName("HEHACKED") != -1)
+    {
+        DEH_LoadLumpByName("HEHACKED", true, true);
     }
 
     //!
@@ -1308,7 +1321,7 @@ void D_DoomMain(void)
     }
 
     I_InitTimer();
-    I_InitSound(false);
+    I_InitSound(heretic);
     I_InitMusic();
 
     tprintf("NET_Init: Init network subsystem.\n", 1);
@@ -1378,6 +1391,18 @@ void D_DoomMain(void)
 //
 // start the appropriate game based on params
 //
+
+    //!
+    // @category game
+    //
+    // Start single player game with items spawns as in cooperative netgame.
+    //
+
+    p = M_ParmExists("-coop_spawns");
+    if (p)
+    {
+        coop_spawns = true;
+    }
 
     D_CheckRecordFrom();
 

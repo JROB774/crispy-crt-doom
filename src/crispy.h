@@ -33,6 +33,8 @@
 #define BETWEEN(l,u,x) (((l)>(x))?(l):((x)>(u))?(u):(x))
 #endif
 
+#define CRISPY_FPSLIMIT_MAX 500
+
 typedef struct
 {
 	// [crispy] "crispness" config variables
@@ -55,9 +57,11 @@ typedef struct
 	int demobar;
 	int extautomap;
 	int flipcorpses;
+	int fpslimit;
 	int freeaim;
 	int freelook;
 	int freelook_hh;
+	int gamma;
 	int hires;
 	int jump;
 	int leveltime;
@@ -145,6 +149,14 @@ enum
     BRIGHTMAPS_SPRITES,
     BRIGHTMAPS_BOTH,
     NUM_BRIGHTMAPS,
+};
+
+enum
+{
+	COLOREDBLOOD_OFF,
+	COLOREDBLOOD_BLOOD,
+	COLOREDBLOOD_ALL,
+	NUM_COLOREDBLOOD,
 };
 
 enum

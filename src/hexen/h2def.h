@@ -159,8 +159,12 @@ typedef enum
 ===============================================================================
 */
 
+
+struct thinker_s;
+
+
 // think_t is a function pointer to a routine to handle an actor
-typedef void (*think_t) ();
+typedef void (*think_t)(struct thinker_s *);
 
 typedef struct thinker_s
 {
@@ -361,11 +365,12 @@ typedef enum
     NUMPSPRITES
 } psprnum_t;
 
-typedef struct
+typedef struct pspdef_s
 {
     state_t *state;             // a NULL state means not active
     int tics;
     fixed_t sx, sy;
+    fixed_t sx2, sy2; // [crispy] variable weapon sprite bob
 } pspdef_t;
 
 /* Old Heretic key type
@@ -580,12 +585,16 @@ typedef struct player_s
 
     // [AM] Previous position of viewz before think.
     //      Used to interpolate between camera positions.
-    angle_t		oldviewz;
+    fixed_t		oldviewz;
+
+    // [crispy] variable player view bob
+    fixed_t bob2;
 } player_t;
 
 #define CF_NOCLIP		1
 #define	CF_GODMODE		2
 #define	CF_NOMOMENTUM	4       // not really a cheat, just a debug aid
+#define CF_SHOWFPS      8       // [crispy] "Cheat" to show FPS
 
 #define ORIGSBARHEIGHT          39 // [crispy]
 #define	SBARHEIGHT	(ORIGSBARHEIGHT << crispy->hires)      // status bar height at bottom of screen
@@ -707,6 +716,8 @@ extern int vanilla_savegame_limit;
 extern int vanilla_demo_limit;
 
 extern boolean usearti;
+
+extern int right_widget_h; // [crispy]
 
 
 /*
@@ -874,6 +885,8 @@ void SV_ClearSaveSlot(int slot); // [crispy]
 //-----
 //PLAY
 //-----
+
+extern lumpinfo_t *maplumpinfo;
 
 void P_Ticker(void);
 // called by C_Ticker
@@ -1091,6 +1104,8 @@ void F_StartFinale(void);
 // STATUS BAR (SB_bar.c)
 //----------------------
 
+#define CURPOS_MAX 6 // [crispy] 7 total artifact frames
+
 extern int inv_ptr;
 extern int curpos;
 extern boolean inventory;
@@ -1129,5 +1144,8 @@ extern int detailLevel;
 
 
 #include "sounds.h"
+
+#include "p_action.h"
+
 
 #endif // __H2DEF__

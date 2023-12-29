@@ -27,6 +27,9 @@
 #include "s_sound.h"
 #include "v_video.h"
 #include "am_map.h"
+#ifdef CRISPY_TRUECOLOR
+#include "v_trans.h" // [crispy] I_BlendDark()
+#endif
 
 // Types
 
@@ -316,6 +319,7 @@ void SB_Ticker(void)
         }
         HealthMarker += delta;
     }
+    SB_PaletteFlash();
 }
 
 //---------------------------------------------------------------------------
@@ -434,20 +438,31 @@ static void DrSmallNumber(int val, int x, int y)
 
 static void ShadeLine(int x, int y, int height, int shade)
 {
-    byte *dest;
+    pixel_t *dest;
+#ifndef CRISPY_TRUECOLOR
     byte *shades;
+#endif
 
     x <<= crispy->hires;
     y <<= crispy->hires;
     height <<= crispy->hires;
 
+#ifndef CRISPY_TRUECOLOR
     shades = colormaps + 9 * 256 + shade * 2 * 256;
+#else
+    shade = 0xFF - (((9 + shade * 2) << 8) / NUMCOLORMAPS);
+#endif
     dest = I_VideoBuffer + y * SCREENWIDTH + x + (WIDESCREENDELTA << crispy->hires);
     while (height--)
     {
         if (crispy->hires)
+#ifndef CRISPY_TRUECOLOR
             *(dest + 1) = *(shades + *dest);
         *(dest) = *(shades + *dest);
+#else
+            *(dest + 1) = I_BlendDark(*dest, shade);
+        *(dest) = I_BlendDark(*dest, shade);
+#endif
         dest += SCREENWIDTH;
     }
 }
@@ -592,7 +607,6 @@ static void RefreshBackground()
 
     if ((SCREENWIDTH >> crispy->hires) != ORIGWIDTH)
     {
-        int x, y;
         byte *src;
         pixel_t *dest;
         const char *name = (gamemode == shareware) ?
@@ -602,17 +616,12 @@ static void RefreshBackground()
         src = W_CacheLumpName(name, PU_CACHE);
         dest = st_backing_screen;
 
-        for (y = SCREENHEIGHT - (42 << crispy->hires); y < SCREENHEIGHT; y++)
-        {
-            for (x = 0; x < SCREENWIDTH; x++)
-            {
-                *dest++ = src[((y & 63) << 6) + (x & 63)];
-            }
-        }
+        V_FillFlat(SCREENHEIGHT - (42 << crispy->hires), SCREENHEIGHT, 0, SCREENWIDTH, src, dest);
 
         // [crispy] preserve bezel bottom edge
         if (scaledviewwidth == SCREENWIDTH)
         {
+            int x;
             patch_t *const patch = W_CacheLumpName("bordb", PU_CACHE);
 
             for (x = 0; x < WIDESCREENDELTA; x += 16)
@@ -701,7 +710,6 @@ void SB_Drawer(void)
             SB_state = 1;
         }
     }
-    SB_PaletteFlash();
 
     // Flight icons
     if (CPlayer->powers[pw_flight])
@@ -802,7 +810,9 @@ void SB_PaletteFlash(void)
 {
     static int sb_palette = 0;
     int palette;
+#ifndef CRISPY_TRUECOLOR
     byte *pal;
+#endif
 
     CPlayer = &players[consoleplayer];
 
@@ -831,8 +841,12 @@ void SB_PaletteFlash(void)
     if (palette != sb_palette)
     {
         sb_palette = palette;
+#ifndef CRISPY_TRUECOLOR
         pal = (byte *) W_CacheLumpNum(playpalette, PU_CACHE) + palette * 768;
         I_SetPalette(pal);
+#else
+        I_SetPalette(palette);
+#endif
     }
 }
 

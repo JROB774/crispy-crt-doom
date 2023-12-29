@@ -23,8 +23,10 @@
 #include "doomkeys.h"
 #include "deh_str.h"
 #include "i_input.h"
+#include "i_joystick.h"
 #include "i_timer.h"
 #include "i_system.h"
+#include "i_swap.h"
 #include "m_argv.h"
 #include "m_controls.h"
 #include "m_misc.h"
@@ -32,6 +34,9 @@
 #include "p_local.h"
 #include "s_sound.h"
 #include "v_video.h"
+
+#include "deh_main.h" // [crispy] for demo footer
+#include "memio.h"
 
 // Macros
 
@@ -311,8 +316,6 @@ void G_BuildTiccmd(ticcmd_t *cmd, int maketic)
     static unsigned int mbmlookctrl = 0; // [crispy]
     static unsigned int kbdlookctrl = 0; // [crispy]
 
-    extern boolean noartiskip;
-
     // haleyjd: removed externdriver crap
 
     memset(cmd, 0, sizeof(*cmd));
@@ -413,10 +416,20 @@ void G_BuildTiccmd(ticcmd_t *cmd, int maketic)
             side += sidemove[speed];
         if (gamekeydown[key_left] || mousebuttons[mousebturnleft])
             side -= sidemove[speed];
-        if (joyxmove > 0)
-            side += sidemove[speed];
-        if (joyxmove < 0)
-            side -= sidemove[speed];
+        if (use_analog && joyxmove)
+        {
+            joyxmove = joyxmove * joystick_move_sensitivity / 10;
+            joyxmove = (joyxmove > FRACUNIT) ? FRACUNIT : joyxmove;
+            joyxmove = (joyxmove < -FRACUNIT) ? -FRACUNIT : joyxmove;
+            side += FixedMul(sidemove[speed], joyxmove);
+        }
+        else if (joystick_move_sensitivity)
+        {
+            if (joyxmove > 0)
+                side += sidemove[speed];
+            if (joyxmove < 0)
+                side -= sidemove[speed];
+        }
     }
     else
     {
@@ -424,40 +437,97 @@ void G_BuildTiccmd(ticcmd_t *cmd, int maketic)
             cmd->angleturn -= angleturn[tspeed];
         if (gamekeydown[key_left] || mousebuttons[mousebturnleft])
             cmd->angleturn += angleturn[tspeed];
-        if (joyxmove > 0)
-            cmd->angleturn -= angleturn[tspeed];
-        if (joyxmove < 0)
-            cmd->angleturn += angleturn[tspeed];
+        if (use_analog && joyxmove)
+        {
+            // Cubic response curve allows for finer control when stick
+            // deflection is small.
+            joyxmove = FixedMul(FixedMul(joyxmove, joyxmove), joyxmove);
+            joyxmove = joyxmove * joystick_turn_sensitivity / 10;
+            cmd->angleturn -= FixedMul(angleturn[1], joyxmove);
+        }
+        else if (joystick_turn_sensitivity)
+        {
+            if (joyxmove > 0)
+                cmd->angleturn -= angleturn[tspeed];
+            if (joyxmove < 0)
+                cmd->angleturn += angleturn[tspeed];
+        }
     }
 
     if (gamekeydown[key_up] || gamekeydown[key_alt_up]) // [crispy] add key_alt_*
         forward += forwardmove[speed];
     if (gamekeydown[key_down] || gamekeydown[key_alt_down]) // [crispy] add key_alt_*
         forward -= forwardmove[speed];
-    if (joyymove < 0)
-        forward += forwardmove[speed];
-    if (joyymove > 0)
-        forward -= forwardmove[speed];
+    if (use_analog && joyymove)
+    {
+        joyymove = joyymove * joystick_move_sensitivity / 10;
+        joyymove = (joyymove > FRACUNIT) ? FRACUNIT : joyymove;
+        joyymove = (joyymove < -FRACUNIT) ? FRACUNIT : joyymove;
+        forward -= FixedMul(forwardmove[speed], joyymove);
+    }
+    else if (joystick_move_sensitivity)
+    {
+        if (joyymove < 0)
+            forward += forwardmove[speed];
+        if (joyymove > 0)
+            forward -= forwardmove[speed];
+    }
     if (gamekeydown[key_straferight] || gamekeydown[key_alt_straferight] || mousebuttons[mousebstraferight] // [crispy] add key_alt_*
-     || joybuttons[joybstraferight] || joystrafemove > 0)
+     || joybuttons[joybstraferight])
         side += sidemove[speed];
     if (gamekeydown[key_strafeleft] || gamekeydown[key_alt_strafeleft] || mousebuttons[mousebstrafeleft] // [crispy] add key_alt_*
-     || joybuttons[joybstrafeleft] || joystrafemove < 0)
+     || joybuttons[joybstrafeleft])
         side -= sidemove[speed];
 
+    if (use_analog && joystrafemove)
+    {
+        joystrafemove = joystrafemove * joystick_move_sensitivity / 10;
+        joystrafemove = (joystrafemove > FRACUNIT) ? FRACUNIT : joystrafemove;
+        joystrafemove = (joystrafemove < -FRACUNIT) ? -FRACUNIT : joystrafemove;
+        side += FixedMul(sidemove[speed], joystrafemove);
+    }
+    else if (joystick_move_sensitivity)
+    {
+        if (joystrafemove < 0)
+            side -= sidemove[speed];
+        if (joystrafemove > 0)
+            side += sidemove[speed];
+    }
     // Look up/down/center keys
     // [crispy] Keyboard lookspring
     if (crispy->freelook_hh == FREELOOK_HH_SPRING)
     {
-        if (gamekeydown[key_lookup] || joylook < 0)
+        if (gamekeydown[key_lookup])
         {
             look = lspeed;
             kbdlookctrl += ticdup;
         }
-        else if (gamekeydown[key_lookdown] || joylook > 0)
+        else if (gamekeydown[key_lookdown])
         {
             look = -lspeed;
             kbdlookctrl += ticdup;
+        }
+        else if (use_analog && joylook)
+        {
+            joylook = joylook * joystick_look_sensitivity / 10;
+            joylook = (joylook > FRACUNIT) ? FRACUNIT : joylook;
+            joylook = (joylook < -FRACUNIT) ? -FRACUNIT : joylook;
+            look = -FixedMul(2, joylook);
+            kbdlookctrl += ticdup;
+        }
+        else if (joystick_look_sensitivity && joylook)
+        {
+            if (joylook < 0)
+            {
+                look = lspeed;
+                kbdlookctrl += ticdup;
+            }
+
+            if (joylook > 0)
+            {
+                look = -lspeed;
+                kbdlookctrl += ticdup;
+            }
         }
         else if (gamekeydown[key_lookcenter] || kbdlookctrl)
         {
@@ -467,13 +537,32 @@ void G_BuildTiccmd(ticcmd_t *cmd, int maketic)
     }
     else
     {
-        if (gamekeydown[key_lookup] || joylook < 0)
+        if (gamekeydown[key_lookup])
         {
             look = lspeed;
         }
-        if (gamekeydown[key_lookdown] || joylook > 0)
+        if (gamekeydown[key_lookdown])
         {
             look = -lspeed;
+        }
+        if (use_analog && joylook)
+        {
+            joylook = joylook * joystick_look_sensitivity / 10;
+            joylook = (joylook > FRACUNIT) ? FRACUNIT : joylook;
+            joylook = (joylook < -FRACUNIT) ? -FRACUNIT : joylook;
+            look = -FixedMul(2, joylook);
+        }
+        else if (joystick_look_sensitivity)
+        {
+            if (joylook < 0)
+            {
+                look = lspeed;
+            }
+
+            if (joylook > 0)
+            {
+                look = -lspeed;
+            }
         }
         // haleyjd: removed externdriver crap
         if (gamekeydown[key_lookcenter])
@@ -718,20 +807,28 @@ void G_BuildTiccmd(ticcmd_t *cmd, int maketic)
     {
         if (demorecording || lowres_turn)
         {
-            // [crispy] Map mouse movement to look variable when recording
-            look += mouse_y_invert ? -mousey / MLOOKUNITLOWRES
-                                        : mousey / MLOOKUNITLOWRES;
+            // [Dasperal] Skip mouse look if it is TOCENTER cmd
+            if (look != TOCENTER)
+            {
+                // [crispy] Map mouse movement to look variable when recording
+                look += mouse_y_invert ? -mousey / MLOOKUNITLOWRES
+                                       :  mousey / MLOOKUNITLOWRES;
 
-            // [crispy] Limit to max speed of keyboard look up/down
-            if (look > 2)
-                look = 2;
-            else if (look < -2)
-                look = -2;
+                // [crispy] Limit to max speed of keyboard look up/down
+                if (look > 2)
+                    look = 2;
+                else if (look < -2)
+                    look = -2;
+            }
         }
         else
         {
             cmd->lookdir = mouse_y_invert ? -mousey : mousey;
-            cmd->lookdir /= MLOOKUNIT;
+            // [Dasperal] Allow precise vertical look with near 0 mouse movement
+            if (cmd->lookdir > 0)
+                cmd->lookdir = (cmd->lookdir + MLOOKUNIT - 1) / MLOOKUNIT;
+            else
+                cmd->lookdir = (cmd->lookdir - MLOOKUNIT + 1) / MLOOKUNIT;
         }
     }
     else if (!novert)
@@ -968,9 +1065,9 @@ static boolean InventoryMoveRight()
     else
     {
         curpos++;
-        if (curpos > 6)
+        if (curpos > CURPOS_MAX)
         {
-            curpos = 6;
+            curpos = CURPOS_MAX;
         }
     }
     return true;
@@ -1373,7 +1470,6 @@ void G_InitPlayer(int player)
 = Can when a player completes a level
 ====================
 */
-extern int playerkeys;
 
 void G_PlayerFinishLevel(int player)
 {
@@ -1825,6 +1921,9 @@ void G_DoLoadGame(void)
     int a, b, c;
     char savestr[SAVESTRINGSIZE];
     char vcheck[VERSIONSIZE], readversion[VERSIONSIZE];
+    const player_t *p; // [crispy]
+
+    p = &players[consoleplayer]; // [crispy]
 
     gameaction = ga_nothing;
 
@@ -1866,6 +1965,17 @@ void G_DoLoadGame(void)
     P_UnArchiveThinkers();
     P_UnArchiveSpecials();
     P_RestoreTargets();
+
+    // [crispy] point to active artifact after load
+    for (i = 0; i < p->inventorySlotNum; i++)
+    {
+        if (p->inventory[i].type == p->readyArtifact)
+        {
+            curpos = inv_ptr = i;
+            curpos = (curpos > CURPOS_MAX) ? CURPOS_MAX : curpos;
+            break;
+        }
+    }
 
     if (SV_ReadByte() != SAVE_GAME_TERMINATOR)
     {                           // Missing savegame termination marker
@@ -2363,6 +2473,124 @@ void G_TimeDemo(char *name)
     }
 }
 
+#define DEMO_FOOTER_SEPARATOR "\n"
+#define NUM_DEMO_FOOTER_LUMPS 4
+
+static size_t WriteCmdLineLump(MEMFILE *stream)
+{
+    int i;
+    long pos;
+    char *tmp, **filenames;
+
+    filenames = W_GetWADFileNames();
+
+    pos = mem_ftell(stream);
+
+    tmp = M_StringJoin("-iwad \"", M_BaseName(filenames[0]), "\"", NULL);
+    mem_fputs(tmp, stream);
+    free(tmp);
+
+    if (filenames[1])
+    {
+        mem_fputs(" -file", stream);
+
+        for (i = 1; filenames[i]; i++)
+        {
+            tmp = M_StringJoin(" \"", M_BaseName(filenames[i]), "\"", NULL);
+            mem_fputs(tmp, stream);
+            free(tmp);
+        }
+    }
+
+    filenames = DEH_GetFileNames();
+
+    if (filenames)
+    {
+        mem_fputs(" -deh", stream);
+
+        for (i = 0; filenames[i]; i++)
+        {
+            tmp = M_StringJoin(" \"", M_BaseName(filenames[i]), "\"", NULL);
+            mem_fputs(tmp, stream);
+            free(tmp);
+        }
+    }
+
+    mem_fputs(" -complevel 0", stream);
+
+    if (M_CheckParm("-solo-net"))
+    {
+        mem_fputs(" -solo-net", stream);
+    }
+
+    return mem_ftell(stream) - pos;
+}
+
+static void WriteFileInfo(const char *name, size_t size, MEMFILE *stream)
+{
+    filelump_t fileinfo = { 0 };
+    static long filepos = sizeof(wadinfo_t);
+
+    fileinfo.filepos = LONG(filepos);
+    fileinfo.size = LONG(size);
+
+    if (name)
+    {
+        size_t len = strnlen(name, 8);
+        if (len < 8)
+        {
+            len++;
+        }
+        memcpy(fileinfo.name, name, len);
+    }
+
+    mem_fwrite(&fileinfo, 1, sizeof(fileinfo), stream);
+
+    filepos += size;
+}
+
+static void G_AddDemoFooter(void)
+{
+    byte *data;
+    size_t size;
+    char *project_string;
+
+    MEMFILE *stream = mem_fopen_write();
+
+    wadinfo_t header = { "PWAD" };
+    header.numlumps = LONG(NUM_DEMO_FOOTER_LUMPS);
+    mem_fwrite(&header, 1, sizeof(header), stream);
+
+    project_string = M_StringReplace(PACKAGE_STRING, "Doom", "Heretic");
+
+    mem_fputs(project_string, stream);
+    mem_fputs(DEMO_FOOTER_SEPARATOR, stream);
+    size = WriteCmdLineLump(stream);
+    mem_fputs(DEMO_FOOTER_SEPARATOR, stream);
+
+    header.infotableofs = LONG(mem_ftell(stream));
+    mem_fseek(stream, 0, MEM_SEEK_SET);
+    mem_fwrite(&header, 1, sizeof(header), stream);
+    mem_fseek(stream, 0, MEM_SEEK_END);
+
+    WriteFileInfo("PORTNAME", strlen(project_string), stream);
+    WriteFileInfo(NULL, strlen(DEMO_FOOTER_SEPARATOR), stream);
+    WriteFileInfo("CMDLINE", size, stream);
+    WriteFileInfo(NULL, strlen(DEMO_FOOTER_SEPARATOR), stream);
+
+    mem_get_buf(stream, (void **)&data, &size);
+
+    while (demo_p > demoend - size)
+    {
+        IncreaseDemoBuffer();
+    }
+
+    memcpy(demo_p, data, size);
+    demo_p += size;
+
+    free(project_string);
+    mem_fclose(stream);
+}
 
 /*
 ===================
@@ -2404,6 +2632,7 @@ boolean G_CheckDemoStatus(void)
     if (demorecording)
     {
         *demo_p++ = DEMOMARKER;
+        G_AddDemoFooter();
         M_WriteFile(demoname, demobuffer, demo_p - demobuffer);
         Z_Free(demobuffer);
         demorecording = false;

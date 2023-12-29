@@ -49,6 +49,8 @@ extern int		validcount;
 extern int		linecount;
 extern int		loopcount;
 
+extern  boolean setsizeneeded;
+
 
 //
 // Lighting LUT.
@@ -79,10 +81,6 @@ extern lighttable_t*	fixedcolormap;
 // There a 0-31, i.e. 32 LUT in the COLORMAP lump.
 #define NUMCOLORMAPS		32
 
-// [AM] Fractional part of the current tic, in the half-open
-//      range of [0.0, 1.0).  Used for interpolation.
-extern fixed_t          fractionaltic;
-
 // Blocky/low detail mode.
 //B remove this?
 //  0 = high, 1 = low
@@ -100,6 +98,10 @@ extern void		(*fuzzcolfunc) (void);
 extern void		(*tlcolfunc) (void);
 // No shadow effects on floors.
 extern void		(*spanfunc) (void);
+
+
+// [crispy] smooth texture scrolling
+extern void R_InterpolateTextureOffsets (void);
 
 
 //
@@ -168,5 +170,8 @@ void R_Init (void);
 
 // Called by M_Responder.
 void R_SetViewSize (int blocks, int detail);
+
+void R_ExecuteSetViewSize(void);
+
 
 #endif

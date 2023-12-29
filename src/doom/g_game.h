@@ -23,6 +23,7 @@
 #include "doomdef.h"
 #include "d_event.h"
 #include "d_ticcmd.h"
+#include "m_fixed.h"
 
 
 //
@@ -57,6 +58,12 @@ void G_PlayDemo (char* name);
 void G_TimeDemo (char* name);
 boolean G_CheckDemoStatus (void);
 
+// [crispy] fast forward to next level while demo playback
+extern boolean netdemo; 
+extern boolean demo_gotonextlvl;
+void G_DoPlayDemo (void);
+void G_DemoGotoNextLevel (boolean start);
+
 void G_ExitLevel (void);
 void G_SecretExitLevel (void);
 
@@ -76,5 +83,12 @@ int G_VanillaVersionCode(void);
 
 extern int vanilla_savegame_limit;
 extern int vanilla_demo_limit;
+
+extern fixed_t forwardmove[2];
+extern fixed_t sidemove[2];
+
+extern boolean sendpause;
+
+
 #endif
 

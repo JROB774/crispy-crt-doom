@@ -173,7 +173,7 @@ boolean P_GiveAmmo(player_t * player, ammotype_t ammo, int count)
     {
         return (false);
     }
-    if ((unsigned int) ammo > NUMAMMO)
+    if ((unsigned int) ammo >= NUMAMMO)
     {
         I_Error("P_GiveAmmo: bad type %i", ammo);
     }
@@ -352,7 +352,6 @@ boolean P_GiveArmor(player_t * player, int armortype)
 
 void P_GiveKey(player_t * player, keytype_t key)
 {
-    extern int playerkeys;
 
     if (player->keys[key])
     {
@@ -912,7 +911,6 @@ void P_TouchSpecialThing(mobj_t * special, mobj_t * toucher)
     if (player == &players[consoleplayer])
     {
         S_StartSound(NULL, sound);
-        SB_PaletteFlash();
     }
 }
 
@@ -1476,7 +1474,6 @@ void P_DamageMobj
         if (player == &players[consoleplayer])
         {
             I_Tactile(40, 10, 40 + temp * 2);
-            SB_PaletteFlash();
         }
     }
 

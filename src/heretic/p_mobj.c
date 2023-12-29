@@ -668,8 +668,9 @@ void P_NightmareRespawn(mobj_t * mobj)
 //
 //----------------------------------------------------------------------------
 
-void P_BlasterMobjThinker(mobj_t * mobj)
+void P_BlasterMobjThinker(thinker_t *thinker)
 {
+    mobj_t *mobj = (mobj_t *) thinker;
     int i;
     fixed_t xfrac;
     fixed_t yfrac;
@@ -739,8 +740,9 @@ void P_BlasterMobjThinker(mobj_t * mobj)
 //
 //----------------------------------------------------------------------------
 
-void P_MobjThinker(mobj_t * mobj)
+void P_MobjThinker(thinker_t *thinker)
 {
+    mobj_t *mobj = (mobj_t *) thinker;
     mobj_t *onmo;
 
     // [crispy] suppress interpolation of player missiles for the first tic
@@ -997,7 +999,6 @@ void P_SpawnPlayer(mapthing_t * mthing)
     fixed_t x, y, z;
     mobj_t *mobj;
     int i;
-    extern int playerkeys;
 
     if (!playeringame[mthing->type - 1])
         return;                 // not playing
@@ -1033,6 +1034,7 @@ void P_SpawnPlayer(mapthing_t * mthing)
     p->extralight = 0;
     p->fixedcolormap = 0;
     p->viewheight = VIEWHEIGHT;
+    pspr_interp = false; // [crispy]
     P_SetupPsprites(p);         // setup gun psprite        
     if (deathmatch)
     {                           // Give all keys in death match mode
@@ -1108,7 +1110,7 @@ void P_SpawnMapThing(mapthing_t * mthing)
     }
 
 // check for appropriate skill level
-    if (!netgame && (mthing->options & 16))
+    if (!coop_spawns && !netgame && (mthing->options & 16))
         return;
 
     if (gameskill == sk_baby)
@@ -1126,8 +1128,12 @@ void P_SpawnMapThing(mapthing_t * mthing)
             break;
 
     if (i == NUMMOBJTYPES)
-        I_Error("P_SpawnMapThing: Unknown type %i at (%i, %i)", mthing->type,
-                mthing->x, mthing->y);
+    {
+        // [crispy] ignore unknown map things
+        printf("P_SpawnMapThing: Unknown type %i at (%i, %i)\n", mthing->type,
+               mthing->x, mthing->y);
+        return;
+    }
 
 // don't spawn keys and players in deathmatch
     if (deathmatch && mobjinfo[i].flags & MF_NOTDMATCH)

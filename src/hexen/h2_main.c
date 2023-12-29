@@ -32,6 +32,7 @@
 #include "s_sound.h"
 #include "i_input.h"
 #include "i_joystick.h"
+#include "i_swap.h" // [crispy] SHORT()
 #include "i_system.h"
 #include "i_timer.h"
 #include "m_argv.h"
@@ -83,6 +84,8 @@ static void CheckRecordFrom(void);
 static void DrawAndBlit(void);
 static void CreateSavePath(void);
 static void WarpCheck(void);
+
+static void CrispyDrawStats(void); // [crispy]
 
 // EXTERNAL DATA DECLARATIONS ----------------------------------------------
 
@@ -195,10 +198,16 @@ void D_BindVariables(void)
     // [crispy] bind "crispness" config variables
     M_BindIntVariable("crispy_automapoverlay",  &crispy->automapoverlay);
     M_BindIntVariable("crispy_automaprotate",   &crispy->automaprotate);
+    M_BindIntVariable("crispy_bobfactor",       &crispy->bobfactor);
+    M_BindIntVariable("crispy_centerweapon",    &crispy->centerweapon);
     M_BindIntVariable("crispy_defaultskill",    &crispy->defaultskill);
+    M_BindIntVariable("crispy_fpslimit",        &crispy->fpslimit);
     M_BindIntVariable("crispy_freelook",        &crispy->freelook_hh);
+    M_BindIntVariable("crispy_gamma",           &crispy->gamma);
     M_BindIntVariable("crispy_hires",           &crispy->hires);
     M_BindIntVariable("crispy_mouselook",       &crispy->mouselook);
+    M_BindIntVariable("crispy_playercoords",    &crispy->playercoords);
+    M_BindIntVariable("crispy_soundmono",       &crispy->soundmono);
     M_BindIntVariable("crispy_smoothscaling",   &crispy->smoothscaling);
     M_BindIntVariable("crispy_crteffect",       &crispy->crteffect);
     M_BindIntVariable("crispy_vsync",           &crispy->vsync);
@@ -458,7 +467,6 @@ void D_DoomMain(void)
 
     //!
     // @category game
-    // @category mod
     //
     // Mana pickups give 50% more mana. This option is not allowed when recording a
     // demo, playing back a demo or when starting a network game.
@@ -468,7 +476,6 @@ void D_DoomMain(void)
 
     //!
     // @category game
-    // @category mod
     //
     // Fast monsters. This option is not allowed when recording a demo,
     // playing back a demo or when starting a network game.
@@ -478,7 +485,6 @@ void D_DoomMain(void)
 
     //!
     // @category game
-    // @category mod
     //
     // Automatic use of Quartz flasks and Mystic urns.
     //
@@ -526,7 +532,7 @@ void D_DoomMain(void)
     I_CheckIsScreensaver();
     I_InitTimer();
     I_InitJoystick();
-    I_InitSound(false);
+    I_InitSound(hexen);
     I_InitMusic();
 
     ST_Message("NET_Init: Init networking subsystem.\n");
@@ -931,6 +937,7 @@ void H2_GameLoop(void)
 
     while (1)
     {
+        static int oldgametic;
         // Frame syncronous IO operations
         I_StartFrame();
 
@@ -938,8 +945,12 @@ void H2_GameLoop(void)
         // Will run at least one tic
         TryRunTics();
 
-        // Move positional sounds
-        S_UpdateSounds(players[displayplayer].mo);
+        if (oldgametic < gametic)
+        {
+            // Move positional sounds
+            S_UpdateSounds(players[displayplayer].mo);
+            oldgametic = gametic;
+        }
 
         DrawAndBlit();
 
@@ -1027,6 +1038,7 @@ static void DrawAndBlit(void)
             CT_Drawer();
             UpdateState |= I_FULLVIEW;
             SB_Drawer();
+            CrispyDrawStats();
             break;
         case GS_INTERMISSION:
             IN_Drawer();
@@ -1094,6 +1106,60 @@ static void DrawMessage(void)
     {
         MN_DrTextA(player->message, 160 - MN_TextAWidth(player->message) / 2,
                    1);
+    }
+}
+
+int right_widget_w, right_widget_h; // [crispy]
+
+static void CrispyDrawStats (void)
+{
+    static short height, coord_x, coord_w;
+    char str[32];
+    player_t *const player = &players[consoleplayer];
+    int right_widget_x;
+
+    if (!height || !coord_x || !coord_w)
+    {
+        const int FontABaseLump = W_GetNumForName("FONTA_S") + 1;
+        const patch_t *const p = W_CacheLumpNum(FontABaseLump + 'A' - 33, PU_CACHE);
+
+        height = SHORT(p->height) + 1;
+        coord_w = 7 * SHORT(p->width);
+        coord_x = ORIGWIDTH - coord_w;
+    }
+
+    right_widget_w = 0;
+    right_widget_h = 0;
+    right_widget_x = coord_x + WIDESCREENDELTA;
+
+    if (crispy->playercoords == WIDGETS_ALWAYS || (automapactive && crispy->playercoords == WIDGETS_AUTOMAP))
+    {
+        right_widget_w = coord_w;
+        right_widget_h = 3 * height + 2;
+
+        M_snprintf(str, sizeof(str), "X %-5d", player->mo->x>>FRACBITS);
+        MN_DrTextA(str, right_widget_x, 1*height);
+
+        M_snprintf(str, sizeof(str), "Y %-5d", player->mo->y>>FRACBITS);
+        MN_DrTextA(str, right_widget_x, 2*height);
+
+        M_snprintf(str, sizeof(str), "A %-5d", player->mo->angle/ANG1);
+        MN_DrTextA(str, right_widget_x, 3*height);
+
+        if (player->cheats & CF_SHOWFPS)
+        {
+            right_widget_h += height + 1;
+            M_snprintf(str, sizeof(str), "%d FPS", crispy->fps);
+            MN_DrTextA(str, right_widget_x, 4*height + 1);
+        }
+    }
+    else if (player->cheats & CF_SHOWFPS)
+    {
+        right_widget_w = coord_w;
+        right_widget_h = height + 2;
+
+        M_snprintf(str, sizeof(str), "%d FPS", crispy->fps);
+        MN_DrTextA(str, right_widget_x, 1*height);
     }
 }
 

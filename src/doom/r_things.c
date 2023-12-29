@@ -65,7 +65,7 @@ degenmobj_t *laserspot = &laserspot_m;
 
 // [crispy] extendable, but the last char element must be zero,
 // keep in sync with multiitem_t multiitem_crosshairtype[] in m_menu.c
-static laserpatch_t laserpatch_m[] = {
+static laserpatch_t laserpatch_m[NUM_CROSSHAIRTYPES + 1] = {
 	{'+', "cross1", 0, 0, 0},
 	{'^', "cross2", 0, 0, 0},
 	{'.', "cross3", 0, 0, 0},
@@ -1045,9 +1045,6 @@ void R_DrawPSprite (pspdef_t* psp, psprnum_t psprnum) // [crispy] differentiate 
 	vis->startfrac = 0;
     }
     
-    // [crispy] free look
-    vis->texturemid += FixedMul(((centery - viewheight / 2) << FRACBITS), pspriteiscale) >> detailshift;
-
     if (vis->x1 > x1)
 	vis->startfrac += vis->xiscale*(vis->x1-x1);
 
@@ -1109,6 +1106,7 @@ void R_DrawPSprite (pspdef_t* psp, psprnum_t psprnum) // [crispy] differentiate 
             int deltax = vis->x2 - vis->x1;
             vis->x1 = oldx1 + FixedMul(vis->x1 - oldx1, fractionaltic);
             vis->x2 = vis->x1 + deltax;
+            vis->x2 = vis->x2 >= viewwidth ? viewwidth - 1 : vis->x2;
             vis->texturemid = oldtexturemid + FixedMul(vis->texturemid - oldtexturemid, fractionaltic);
         }
         else
@@ -1119,6 +1117,9 @@ void R_DrawPSprite (pspdef_t* psp, psprnum_t psprnum) // [crispy] differentiate 
             pspr_interp = true;
         }
     }
+
+    // [crispy] free look
+    vis->texturemid += FixedMul(((centery - viewheight / 2) << FRACBITS), pspriteiscale) >> detailshift;
 
     R_DrawVisSprite (vis, vis->x1, vis->x2);
 }
@@ -1211,7 +1212,7 @@ void R_SortVisSprites (void)
     int			count;
     vissprite_t*	ds;
     vissprite_t*	best;
-    vissprite_t		unsorted;
+    static vissprite_t	unsorted;
     fixed_t		bestscale;
 
     count = vissprite_p - vissprites;

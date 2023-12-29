@@ -56,7 +56,6 @@ int			validcount = 1;
 
 
 lighttable_t*		fixedcolormap;
-extern lighttable_t**	walllights;
 
 int			centerx;
 int			centery;
@@ -1107,7 +1106,6 @@ void R_SetupFrame (player_t* player)
 void R_RenderPlayerView (player_t* player)
 {	
     extern void V_DrawFilledBox (int x, int y, int w, int h, int c);
-    extern void R_InterpolateTextureOffsets (void);
 
     R_SetupFrame (player);
 

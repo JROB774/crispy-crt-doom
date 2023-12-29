@@ -184,10 +184,8 @@ void P_AnimateSurfaces(void)
     }
 }
 
-extern fixed_t fractionaltic; // [crispy]
-
 // [crispy] smooth texture scrolling
-void R_InterpolateTextureOffset(void)
+void R_InterpolateTextureOffsets(void)
 {
     const line_t* line;
     side_t* side;

@@ -169,6 +169,59 @@ fixed_t*	spritetopoffset;
 
 lighttable_t	*colormaps;
 
+// [FG] check if the lump can be a Doom patch
+// taken from PrBoom+ prboom2/src/r_patch.c:L350-L390
+
+static boolean R_IsPatchLump (const int lump)
+{
+  int size;
+  int width, height;
+  const patch_t *patch;
+  boolean result;
+
+  if (lump < 0)
+    return false;
+
+  size = W_LumpLength(lump);
+
+  // minimum length of a valid Doom patch
+  if (size < 13)
+    return false;
+
+  patch = (const patch_t *)W_CacheLumpNum(lump, PU_CACHE);
+
+  // [FG] detect patches in PNG format early
+  if (!memcmp(patch, "\211PNG\r\n\032\n", 8))
+    return false;
+
+  width = SHORT(patch->width);
+  height = SHORT(patch->height);
+
+  result = (height > 0 && height <= 16384 && width > 0 && width <= 16384 && width < size / 4);
+
+  if (result)
+  {
+    // The dimensions seem like they might be valid for a patch, so
+    // check the column directory for extra security. All columns
+    // must begin after the column directory, and none of them must
+    // point past the end of the patch.
+    int x;
+
+    for (x = 0; x < width; x++)
+    {
+      unsigned int ofs = LONG(patch->columnofs[x]);
+
+      // Need one byte for an empty column (but there's patches that don't know that!)
+      if (ofs < (unsigned int)width * 4 + 8 || ofs >= (unsigned int)size)
+      {
+        result = false;
+        break;
+      }
+    }
+  }
+
+  return result;
+}
 
 //
 // MAPTEXTURE_T CACHING
@@ -452,17 +505,6 @@ void R_GenerateLookup (int texnum)
 	x1 = patch->originx;
 	x2 = x1 + SHORT(realpatch->width);
 
-	// [crispy] detect patches in PNG format... and fail
-	{
-		const unsigned char *magic = (const unsigned char *) realpatch;
-
-		if (magic[0] == 0x89 &&
-		    magic[1] == 'P' && magic[2] == 'N' && magic[3] == 'G')
-		{
-			I_Error("Patch in PNG format detected: %.8s", lumpinfo[patch->patch]->name);
-		}
-	}
-	
 	if (x1 < 0)
 	    x = 0;
 	else
@@ -628,6 +670,26 @@ R_GetColumnMod
 	R_GenerateComposite (tex);
 
     return texturecomposite[tex] + ofs;
+}
+
+// [crispy] wrapping column getter function for non-power-of-two wide sky textures
+byte*
+R_GetColumnMod2
+( int		tex,
+  int		col )
+{
+    int		ofs;
+
+    while (col < 0)
+	col += texturewidth[tex];
+
+    col %= texturewidth[tex];
+    ofs = texturecolumnofs2[tex][col];
+
+    if (!texturecomposite2[tex])
+	R_GenerateComposite(tex);
+
+    return texturecomposite2[tex] + ofs;
 }
 
 
@@ -807,17 +869,14 @@ void R_InitTextures (void)
     {
 	for (j = 0; j < pnameslumps[i].nummappatches; j++)
 	{
-	    int p, po;
+	    int p;
 
 	    M_StringCopy(name, pnameslumps[i].name_p + j * 8, sizeof(name));
-	    p = po = W_CheckNumForName(name);
-	    // [crispy] prevent flat lumps from being mistaken as patches
-	    while (p >= firstflat && p <= lastflat)
-	    {
-		p = W_CheckNumForNameFromTo (name, p - 1, 0);
-	    }
+	    p = W_CheckNumForName(name);
+	    if (!R_IsPatchLump(p))
+	        p = -1;
 	    // [crispy] if the name is unambiguous, use the lump we found
-	    patchlookup[k++] = (p == -1) ? po : p;
+	    patchlookup[k++] = p;
 	}
     }
 
@@ -1133,14 +1192,6 @@ void R_InitColormaps (void)
 	byte *playpal;
 	int c, i, j = 0;
 	byte r, g, b;
-	extern byte **gamma2table;
-
-	// [crispy] intermediate gamma levels
-	if (!gamma2table)
-	{
-		extern void I_SetGammaTable (void);
-		I_SetGammaTable();
-	}
 
 	playpal = W_CacheLumpName("PLAYPAL", PU_STATIC);
 
@@ -1157,9 +1208,9 @@ void R_InitColormaps (void)
 
 			for (i = 0; i < 256; i++)
 			{
-				r = gamma2table[usegamma][playpal[3 * i + 0]] * (1. - scale) + gamma2table[usegamma][0] * scale;
-				g = gamma2table[usegamma][playpal[3 * i + 1]] * (1. - scale) + gamma2table[usegamma][0] * scale;
-				b = gamma2table[usegamma][playpal[3 * i + 2]] * (1. - scale) + gamma2table[usegamma][0] * scale;
+				r = gamma2table[crispy->gamma][playpal[3 * i + 0]] * (1. - scale) + gamma2table[crispy->gamma][0] * scale;
+				g = gamma2table[crispy->gamma][playpal[3 * i + 1]] * (1. - scale) + gamma2table[crispy->gamma][0] * scale;
+				b = gamma2table[crispy->gamma][playpal[3 * i + 2]] * (1. - scale) + gamma2table[crispy->gamma][0] * scale;
 
 				colormaps[j++] = 0xff000000 | (r << 16) | (g << 8) | b;
 			}
@@ -1172,7 +1223,7 @@ void R_InitColormaps (void)
 			     (byte) (0.299 * playpal[3 * i + 0] +
 			             0.587 * playpal[3 * i + 1] +
 			             0.114 * playpal[3 * i + 2]);
-			r = g = b = gamma2table[usegamma][gray];
+			r = g = b = gamma2table[crispy->gamma][gray];
 
 			colormaps[j++] = 0xff000000 | (r << 16) | (g << 8) | b;
 		}
@@ -1185,9 +1236,9 @@ void R_InitColormaps (void)
 		{
 			for (i = 0; i < 256; i++)
 			{
-				r = gamma2table[usegamma][playpal[3 * colormap[c * 256 + i] + 0]] & ~3;
-				g = gamma2table[usegamma][playpal[3 * colormap[c * 256 + i] + 1]] & ~3;
-				b = gamma2table[usegamma][playpal[3 * colormap[c * 256 + i] + 2]] & ~3;
+				r = gamma2table[crispy->gamma][playpal[3 * colormap[c * 256 + i] + 0]] & ~3;
+				g = gamma2table[crispy->gamma][playpal[3 * colormap[c * 256 + i] + 1]] & ~3;
+				b = gamma2table[crispy->gamma][playpal[3 * colormap[c * 256 + i] + 2]] & ~3;
 
 				colormaps[j++] = 0xff000000 | (r << 16) | (g << 8) | b;
 			}
@@ -1224,6 +1275,20 @@ void R_InitColormaps (void)
 	}
 
 	W_ReleaseLumpName("PLAYPAL");
+
+	i = W_CheckNumForName(DEH_String("CRGREEN"));
+	if (i >= 0)
+	{
+	    cr[CR_RED2GREEN] = W_CacheLumpNum(i, PU_STATIC);
+	}
+
+	i = W_CheckNumForName(DEH_String("CRBLUE2"));
+	if (i == -1)
+	    i = W_CheckNumForName(DEH_String("CRBLUE"));
+	if (i >= 0)
+	{
+	    cr[CR_RED2BLUE] = W_CacheLumpNum(i, PU_STATIC);
+	}
     }
 }
 
@@ -1250,6 +1315,8 @@ void R_InitData (void)
     printf (".");
     R_InitSpriteLumps ();
     printf (".");
+    // [crispy] Initialize and generate gamma-correction levels.
+    I_SetGammaTable ();
     R_InitColormaps ();
 #ifndef CRISPY_TRUECOLOR
     R_InitTranMap(); // [crispy] prints a mark itself

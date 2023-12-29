@@ -21,6 +21,7 @@
 #define __I_VIDEO__
 
 #include "doomtype.h"
+#include "m_fixed.h" // [crispy] fixed_t
 #include "crispy.h"
 
 // Screen width and height.
@@ -36,6 +37,7 @@ extern int SCREENHEIGHT;
 extern int NONWIDEWIDTH; // [crispy] non-widescreen SCREENWIDTH
 extern int WIDESCREENDELTA; // [crispy] horizontal widescreen offset
 void I_GetScreenDimensions (void); // [crispy] re-calculate WIDESCREENDELTA
+void I_ToggleVsync (void); // [crispy] calls native SDL vsync toggle
 
 // Screen height used when aspect_ratio_correct=true.
 
@@ -63,6 +65,11 @@ int I_GetPaletteIndex(int r, int g, int b);
 void I_SetPalette (int palette);
 extern const pixel_t I_MapRGB (const uint8_t r, const uint8_t g, const uint8_t b);
 #endif
+
+extern byte gamma2table[18][256];
+void I_SetGammaTable (void);
+
+extern fixed_t fractionaltic;
 
 void I_UpdateNoBlit (void);
 void I_FinishUpdate (void);
