@@ -618,7 +618,7 @@ crtemu_t* crtemu_create( void* memctx )
         "vec3 tsample( sampler2D samp, vec2 tc, float offs, vec2 resolution )"
         "    {"
         "    vec3 s = pow( abs( texture2D( samp, vec2( tc.x, 1.0-tc.y ) ).rgb), vec3( 2.2 ) );"
-        "    return s*vec3(1.25);"
+        "    return s * mix(vec3(1.25), vec3(2.2), 1.0-((s.r+s.g+s.b)/3.0));"
         "    }"
         ""
         "vec3 filmic( vec3 LinearColor )"
