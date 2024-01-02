@@ -677,7 +677,7 @@ enum
 static menuitem_t Crispness5Menu[]=
 {
     {-1,"",0,'\0'},
-    {1,"",  M_CrispyToggleCRTEffect,'c'},
+    {3,"",  M_CrispyToggleCRTEffect,'c'},
     {-1,"",0,'\0'},
     {1,"",  M_CrispnessNext,'n'},
     {1,"",  M_CrispnessPrev,'p'},

@@ -36,11 +36,7 @@
 #ifndef CRTEMU_IMPLEMENTATION
 #define CRTEMU_IMPLEMENTATION
 #endif
-#ifndef CRT_FRAME_IMPLEMENTATION
-#define CRT_FRAME_IMPLEMENTATION
-#endif
 #include "crtemu.h"
-#include "crt_frame.h"
 
 #ifndef CRTEMU_PC_REPORT_SHADER_ERRORS
 #define CRTEMU_PC_REPORT_SHADER_ERRORS
@@ -48,11 +44,7 @@
 #ifndef CRTEMU_PC_IMPLEMENTATION
 #define CRTEMU_PC_IMPLEMENTATION
 #endif
-#ifndef CRT_FRAME_PC_IMPLEMENTATION
-#define CRT_FRAME_PC_IMPLEMENTATION
-#endif
 #include "crtemu_pc.h"
-#include "crt_frame_pc.h"
 
 #include "crispy.h"
 
