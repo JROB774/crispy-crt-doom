@@ -280,4 +280,12 @@ enum
     NUM_RATIOS
 };
 
+enum
+{
+    CRT_OFF,
+    CRT_TV,
+    CRT_PC,
+    NUM_CRTS
+};
+
 #endif

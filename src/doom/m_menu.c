@@ -1673,7 +1673,7 @@ static void M_DrawCrispness5(void)
     M_DrawCrispnessHeader("Crispness 5/5");
 
     M_DrawCrispnessSeparator(crispness_sep_special, "Special");
-    M_DrawCrispnessItem(crispness_crteffect, "CRT Effect", crispy->crteffect, !force_software_renderer);
+    M_DrawCrispnessMultiItem(crispness_crteffect, "CRT Effect", multiitem_crteffect, crispy->crteffect, !force_software_renderer);
 
     M_DrawCrispnessGoto(crispness5_next, "First Page >");
     M_DrawCrispnessGoto(crispness5_prev, "< Last Page");
@@ -2809,7 +2809,7 @@ boolean M_Responder (event_t* ev)
         // hovewer, allow while multiplayer demos
         else if ((!netgame || netdemo) && key != 0 && key == key_menu_reloadlevel)
         {
-	    if (demoplayback)         
+	    if (demoplayback)
 	    {
 		if (crispy->demowarp)
 		{

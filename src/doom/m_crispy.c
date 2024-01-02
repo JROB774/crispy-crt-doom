@@ -172,6 +172,14 @@ multiitem_t multiitem_widescreen[NUM_RATIOS] =
     {RATIO_21_9, "21:9"},
 };
 
+multiitem_t multiitem_crteffect[NUM_CRTS] =
+{
+    {CRT_OFF, "off"},
+    {CRT_TV, "crt tv"},
+    {CRT_PC, "crt pc"},
+};
+
+
 extern void AM_LevelInit (boolean reinit);
 extern void EnableLoadingDisk (void);
 extern void P_SegLengths (boolean contrast_only);
@@ -514,8 +522,7 @@ void M_CrispyToggleSmoothScaling(int choice)
 
 void M_CrispyToggleCRTEffect(int choice)
 {
-    choice = 0;
-    crispy->crteffect = !crispy->crteffect;
+    ChangeSettingEnum(&crispy->crteffect, choice, NUM_CRTS);
 }
 
 static void M_CrispyToggleSmoothLightingHook (void)

@@ -36,7 +36,23 @@
 #ifndef CRTEMU_IMPLEMENTATION
 #define CRTEMU_IMPLEMENTATION
 #endif
+#ifndef CRT_FRAME_IMPLEMENTATION
+#define CRT_FRAME_IMPLEMENTATION
+#endif
 #include "crtemu.h"
+#include "crt_frame.h"
+
+#ifndef CRTEMU_PC_REPORT_SHADER_ERRORS
+#define CRTEMU_PC_REPORT_SHADER_ERRORS
+#endif
+#ifndef CRTEMU_PC_IMPLEMENTATION
+#define CRTEMU_PC_IMPLEMENTATION
+#endif
+#ifndef CRT_FRAME_PC_IMPLEMENTATION
+#define CRT_FRAME_PC_IMPLEMENTATION
+#endif
+#include "crtemu_pc.h"
+#include "crt_frame_pc.h"
 
 #include "crispy.h"
 
@@ -72,6 +88,7 @@ static SDL_Window   *screen;
 static SDL_Renderer *renderer;
 #else
 static crtemu_t     *crtemu;
+static crtemu_pc_t  *crtemu_pc;
 static SDL_GLContext glcontext;
 static GLuint        gltarget;
 static int           gltargetw;
@@ -968,9 +985,13 @@ void I_FinishUpdate (void)
 
     crt_us += 16666;
 
-    if(crispy->crteffect)
+    if(crispy->crteffect == CRT_TV)
     {
         crtemu_present(crtemu, crt_us, dstpixels, SCREENWIDTH, SCREENHEIGHT, 0xFFFFFF, 0x000000);
+    }
+    else if(crispy->crteffect == CRT_PC)
+    {
+        crtemu_pc_present(crtemu_pc, crt_us, dstpixels, SCREENWIDTH, SCREENHEIGHT, 0xFFFFFF, 0x000000);
     }
     else
     {
@@ -1028,6 +1049,7 @@ void I_FinishUpdate (void)
 
         glEnable(GL_TEXTURE_2D);
         crtemu->UseProgram(GL_NONE); // @Todo: Cleanup!
+        crtemu_pc->UseProgram(GL_NONE); // @Todo: Cleanup!
         glBindTexture(GL_TEXTURE_2D, gltarget);
         glTexSubImage2D(GL_TEXTURE_2D, 0, 0,0, gltargetw,
             gltargeth, GL_RGBA, GL_UNSIGNED_BYTE, dstpixels);
@@ -1707,6 +1729,18 @@ static void SetVideoMode(void)
     if (crtemu == NULL)
     {
         I_Error("Error creating CRT emulation effect!");
+    }
+
+    if (crtemu_pc != NULL)
+    {
+        crtemu_pc_destroy(crtemu_pc);
+    }
+
+    crtemu_pc = crtemu_pc_create(NULL);
+
+    if (crtemu_pc == NULL)
+    {
+        I_Error("Error creating CRT PC emulation effect!");
     }
 
     if (gltarget != GL_NONE)
