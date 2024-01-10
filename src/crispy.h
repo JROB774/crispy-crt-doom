@@ -98,6 +98,7 @@ typedef struct
 	boolean fliplevels;
 	boolean flipweapons;
 	boolean haved1e5;
+	boolean haved1e6;
 	boolean havee1m10;
 	boolean havemap33;
 	boolean havessg;
@@ -114,6 +115,7 @@ typedef struct
 	char *havenerve;
 	char *havemaster;
 	char *havesigil;
+	char *havesigil2;
 
 	const char *sdlversion;
 	const char *platform;
