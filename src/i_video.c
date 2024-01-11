@@ -1311,10 +1311,10 @@ void I_GraphicsCheckCommandLine(void)
     //!
     // @category video
     //
-    // Disable OpenGL.
+    // Disable OpenGL rendering.
     //
 
-    nogl = M_CheckParm ("-nogl");
+    nogl = M_CheckParm ("-nogl") || M_CheckParm ("-nodraw"); // The nodraw command also implictly invokes nogl.
 
     //!
     // @category video
