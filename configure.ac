@@ -188,7 +188,21 @@ CFLAGS="$CFLAGS $SDL_CFLAGS ${SAMPLERATE_CFLAGS:-} ${PNG_CFLAGS:-} ${FLUIDSYNTH_
 LDFLAGS="$LDFLAGS $SDL_LIBS ${SAMPLERATE_LIBS:-} ${PNG_LIBS:-} ${FLUIDSYNTH_LIBS:-} ${LIBZ_LIBS:-}"
 case "$host" in
   *-*-mingw* | *-*-cygwin* | *-*-msvc* )
-    LDFLAGS="$LDFLAGS -lwinmm -lopengl32"
+    LDFLAGS="$LDFLAGS -lwinmm"
+    ;;
+  *)
+esac
+
+# Determine the host OS as this will change how we link with OpenGL.
+case "${host_os}" in
+  linux* )
+    LDFLAGS="$LDFLAGS -lgl"
+    ;;
+  cygwin* | mingw* )
+    LDFLAGS="$LDFLAGS -lopengl32"
+    ;;
+  darwin* )
+    LDFLAGS="$LDFLAGS -framework OpenGL"
     ;;
   *)
 esac
