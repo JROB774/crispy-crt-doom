@@ -16,7 +16,6 @@
 //	DOOM graphics stuff for SDL.
 //
 
-
 #include <stdlib.h>
 #include <string.h>
 
@@ -76,16 +75,13 @@ int WIDESCREENDELTA; // [crispy] horizontal widescreen offset
 // @Todo: Handle force_software_renderer + reimplemnt non-crt rendering...
 
 static SDL_Window   *screen;
-#if CRISPY_OLD_RENDERING
 static SDL_Renderer *renderer;
-#else
 static crtemu_t     *crtemu;
 static crtemu_pc_t  *crtemu_pc;
 static SDL_GLContext glcontext;
 static GLuint        gltarget;
 static int           gltargetw;
 static int           gltargeth;
-#endif
 
 // Window title
 
@@ -102,8 +98,8 @@ static const char *window_title = "";
 static SDL_Surface *screenbuffer = NULL;
 #endif
 static SDL_Surface *argbbuffer = NULL;
-// static SDL_Texture *texture = NULL;
-// static SDL_Texture *texture_upscaled = NULL;
+static SDL_Texture *texture = NULL;
+static SDL_Texture *texture_upscaled = NULL;
 
 #ifndef CRISPY_TRUECOLOR
 static SDL_Rect blit_rect = {
@@ -226,6 +222,10 @@ static boolean display_fps_dots;
 // video buffer.
 
 static boolean noblit;
+
+// If this is true, then the SDL window will not be created with OpenGL.
+
+static boolean nogl;
 
 // Callback function to invoke to determine whether to grab the
 // mouse pointer.
@@ -609,7 +609,8 @@ static void UpdateGrab(void)
 
 static void LimitTextureSize(int *w_upscale, int *h_upscale)
 {
-    #if CRISPY_OLD_RENDERING
+    if(!nogl) return;
+
     SDL_RendererInfo rinfo;
     int orig_w, orig_h;
 
@@ -674,12 +675,12 @@ static void LimitTextureSize(int *w_upscale, int *h_upscale)
                max_scaling_buffer_pixels,
                rinfo.max_texture_width, rinfo.max_texture_height);
     }
-    #endif
 }
 
 static void CreateUpscaledTexture(boolean force)
 {
-    #if CRISPY_OLD_RENDERING
+    if(!nogl) return;
+
     int w, h;
     int h_upscale, w_upscale;
     static int h_upscale_old, w_upscale_old;
@@ -760,7 +761,6 @@ static void CreateUpscaledTexture(boolean force)
     {
         SDL_DestroyTexture(old_texture);
     }
-    #endif
 }
 
 // [AM] Fractional part of the current tic, in the half-open
@@ -874,12 +874,13 @@ void I_FinishUpdate (void)
 
         if (vga_porch_flash)
         {
-            #if CRISPY_OLD_RENDERING
-            // "flash" the pillars/letterboxes with palette changes, emulating
-            // VGA "porch" behaviour (GitHub issue #832)
-            SDL_SetRenderDrawColor(renderer, palette[0].r, palette[0].g,
-                palette[0].b, SDL_ALPHA_OPAQUE);
-            #endif
+            if(nogl)
+            {
+                // "flash" the pillars/letterboxes with palette changes, emulating
+                // VGA "porch" behaviour (GitHub issue #832)
+                SDL_SetRenderDrawColor(renderer, palette[0].r, palette[0].g,
+                    palette[0].b, SDL_ALPHA_OPAQUE);
+            }
         }
     }
 
@@ -889,7 +890,9 @@ void I_FinishUpdate (void)
     SDL_LowerBlit(screenbuffer, &blit_rect, argbbuffer, &blit_rect);
 #endif
 
-    #if CRISPY_OLD_RENDERING
+    if(nogl)
+    {
+
     // Update the intermediate texture with the contents of the RGBA buffer.
 
     SDL_UpdateTexture(texture, NULL, argbbuffer->pixels, argbbuffer->pitch);
@@ -929,7 +932,9 @@ void I_FinishUpdate (void)
 
     SDL_RenderPresent(renderer);
 
-    #else
+    }
+    else
+    {
 
     int windoww;
     int windowh;
@@ -1058,7 +1063,7 @@ void I_FinishUpdate (void)
 
     SDL_GL_SwapWindow(screen);
 
-    #endif
+    }
 
     // [AM] Figure out how far into the current tic we're in as a fixed_t.
     if (crispy->uncapped && !singletics)
@@ -1302,6 +1307,14 @@ static void SetScaleFactor(int factor)
 void I_GraphicsCheckCommandLine(void)
 {
     int i;
+
+    //!
+    // @category video
+    //
+    // Disable OpenGL.
+    //
+
+    nogl = M_CheckParm ("-nogl");
 
     //!
     // @category video
@@ -1599,7 +1612,10 @@ static void SetVideoMode(void)
     I_GetWindowPosition(&x, &y, w, h);
 
     // If we want to render with a CRT effect then we need to use OpenGL.
-    window_flags |= SDL_WINDOW_OPENGL;
+    if(!nogl)
+    {
+        window_flags |= SDL_WINDOW_OPENGL;
+    }
 
     // Create window and renderer contexts. We set the window title
     // later anyway and leave the window position "undefined". If
@@ -1650,7 +1666,9 @@ static void SetVideoMode(void)
         crispy->vsync = false;
     }
 
-    #if CRISPY_OLD_RENDERING
+    if(nogl)
+    {
+
     if (renderer != NULL)
     {
         SDL_DestroyRenderer(renderer);
@@ -1706,7 +1724,9 @@ static void SetVideoMode(void)
     SDL_RenderClear(renderer);
     SDL_RenderPresent(renderer);
 
-    #else
+    }
+    else
+    {
 
     if (glcontext != NULL)
     {
@@ -1766,7 +1786,7 @@ static void SetVideoMode(void)
         I_Error("Error creating OpenGL render target texture!");
     }
 
-    #endif
+    }
 
 #ifndef CRISPY_TRUECOLOR
     // Create the 8-bit paletted and the 32-bit RGBA screenbuffer surfaces.
@@ -1818,7 +1838,9 @@ static void SetVideoMode(void)
         SDL_FillRect(argbbuffer, NULL, 0);
     }
 
-    #if CRISPY_OLD_RENDERING
+    if(nogl)
+    {
+
     if (texture != NULL)
     {
         SDL_DestroyTexture(texture);
@@ -1838,7 +1860,8 @@ static void SetVideoMode(void)
                                 pixel_format,
                                 SDL_TEXTUREACCESS_STREAMING,
                                 SCREENWIDTH, SCREENHEIGHT);
-    #endif
+
+    }
 
     // Workaround for SDL 2.0.14+ alt-tab bug (taken from Doom Retro via Prboom-plus and Woof)
 #if defined(_WIN32)
@@ -1916,11 +1939,14 @@ void I_GetScreenDimensions (void)
 void I_ToggleVsync (void)
 {
 #if SDL_VERSION_ATLEAST(2, 0, 18)
-    #if CRISPY_OLD_RENDERING
+    if(nogl)
+    {
     SDL_RenderSetVSync(renderer, crispy->vsync);
-    #else
+    }
+    else
+    {
     SDL_GL_SetSwapInterval(crispy->vsync);
-    #endif
+    }
 #else
     I_ReInitGraphics(REINIT_RENDERER | REINIT_TEXTURES | REINIT_ASPECTRATIO);
 #endif
@@ -2084,13 +2110,16 @@ void I_ReInitGraphics (int reinit)
 #endif
 		V_RestoreBuffer();
 
-        #if CRISPY_OLD_RENDERING
+        if(nogl)
+        {
         // [crispy] it will get re-created below with the new resolution
         SDL_DestroyTexture(texture);
-        #endif
+        }
 	}
 
-    #if CRISPY_OLD_RENDERING
+    if(nogl)
+    {
+
     // [crispy] re-create renderer
     if (reinit & REINIT_RENDERER)
     {
@@ -2158,7 +2187,8 @@ void I_ReInitGraphics (int reinit)
         SDL_RenderSetIntegerScale(renderer, integer_scaling);
         #endif
     }
-    #endif
+
+    }
 
 	// [crispy] adjust the window size and re-set the palette
 	need_resize = true;
@@ -2168,7 +2198,8 @@ void I_ReInitGraphics (int reinit)
 
 void I_RenderReadPixels(byte **data, int *w, int *h, int *p)
 {
-    #if CRISPY_OLD_RENDERING
+    if(!nogl) return;
+
 	SDL_Rect rect;
 	SDL_PixelFormat *format;
 	int temp;
@@ -2246,7 +2277,6 @@ void I_RenderReadPixels(byte **data, int *w, int *h, int *p)
 	*p = temp;
 
 	SDL_FreeFormat(format);
-    #endif
 }
 
 // Bind all variables controlling video options into the configuration
