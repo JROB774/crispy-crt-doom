@@ -21,6 +21,8 @@ execgames_SCRIPTS = $(SETUP_BINARIES)
 AM_CFLAGS = -I$(top_srcdir)/textscreen            \
             -I$(top_srcdir)/opl                   \
             -I$(top_srcdir)/pcsound               \
+            -I$(top_srcdir)/crtemu                \
+            -I$(top_srcdir)/glew                  \
             @SDLMIXER_CFLAGS@ @SDLNET_CFLAGS@
 
 # Common source files used by absolutely everything:

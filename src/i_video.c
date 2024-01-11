@@ -19,8 +19,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "SDL.h"
-#include "SDL_opengl.h"
+#ifndef GLEW_STATIC
+#define GLEW_STATIC
+#endif
+#include <glew.c>
+
+#include <SDL.h>
+#include <SDL_opengl.h>
 
 #ifdef _WIN32
 #ifndef WIN32_LEAN_AND_MEAN
@@ -35,7 +40,7 @@
 #ifndef CRTEMU_IMPLEMENTATION
 #define CRTEMU_IMPLEMENTATION
 #endif
-#include "crtemu.h"
+#include <crtemu.h>
 
 #ifndef CRTEMU_PC_REPORT_SHADER_ERRORS
 #define CRTEMU_PC_REPORT_SHADER_ERRORS
@@ -43,7 +48,7 @@
 #ifndef CRTEMU_PC_IMPLEMENTATION
 #define CRTEMU_PC_IMPLEMENTATION
 #endif
-#include "crtemu_pc.h"
+#include <crtemu_pc.h>
 
 #include "crispy.h"
 
@@ -1740,6 +1745,8 @@ static void SetVideoMode(void)
         I_Error("Error creating GL context for screen window: %s",
                 SDL_GetError());
     }
+
+    glewInit();
 
     if (crtemu != NULL)
     {
