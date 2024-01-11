@@ -156,8 +156,7 @@ EXTRA_LIBS =                                               \
                @LDFLAGS@                                   \
                @SDL_LIBS@                                  \
                @SDLMIXER_LIBS@                             \
-               @SDLNET_LIBS@                               \
-               -lopengl32
+               @SDLNET_LIBS@
 
 if HAVE_WINDRES
 @PROGRAM_PREFIX@doom_SOURCES=$(SOURCE_FILES_WITH_DEH) doom-res.rc
