@@ -196,7 +196,7 @@ esac
 # Determine the host OS as this will change how we link with OpenGL.
 case "${host_os}" in
   linux* )
-    LDFLAGS="$LDFLAGS -lgl"
+    LDFLAGS="$LDFLAGS -lGL"
     ;;
   cygwin* | mingw* )
     LDFLAGS="$LDFLAGS -lopengl32"
