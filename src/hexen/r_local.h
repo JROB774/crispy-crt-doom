@@ -63,6 +63,7 @@
 typedef struct
 {
     fixed_t x, y;
+    fixed_t r_x, r_y; // [crispy] for rendering only
 } vertex_t;
 
 struct line_s;
@@ -170,6 +171,7 @@ typedef struct
     vertex_t *v1, *v2;
     fixed_t offset;
     angle_t angle;
+    angle_t r_angle; // [crispy] for rendering only
     side_t *sidedef;
     line_t *linedef;
     sector_t *frontsector;
@@ -231,7 +233,7 @@ typedef struct
 ==============================================================================
 */
 
-typedef byte lighttable_t;      // this could be wider for >8 bit display
+typedef pixel_t lighttable_t;      // this could be wider for >8 bit display
 
 #define MAXVISPLANES    160*8
 #define MAXOPENINGS             MAXWIDTH*64*4
@@ -293,6 +295,9 @@ typedef struct vissprite_s
     boolean psprite;            // true if psprite
     int class;                  // player class (used in translation)
     fixed_t floorclip;
+#ifdef CRISPY_TRUECOLOR
+    const pixel_t (*blendfunc)(const pixel_t fg, const pixel_t bg);
+#endif
 } vissprite_t;
 
 
@@ -397,6 +402,7 @@ extern void R_InterpolateTextureOffsets (void);
 int R_PointOnSide(fixed_t x, fixed_t y, node_t * node);
 int R_PointOnSegSide(fixed_t x, fixed_t y, seg_t * line);
 angle_t R_PointToAngle(fixed_t x, fixed_t y);
+angle_t R_PointToAngleCrispy(fixed_t x, fixed_t y);
 angle_t R_PointToAngle2(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2);
 fixed_t R_PointToDist(fixed_t x, fixed_t y);
 fixed_t R_ScaleFromGlobalAngle(angle_t visangle);
@@ -499,7 +505,7 @@ extern fixed_t *textureheight;  // needed for texture pegging
 extern fixed_t *spritewidth;    // needed for pre rendering (fracs)
 extern fixed_t *spriteoffset;
 extern fixed_t *spritetopoffset;
-extern lighttable_t *colormaps;
+extern lighttable_t *colormaps, *pal_color;
 extern int firstflat;
 extern int numflats;
 
@@ -513,6 +519,9 @@ byte *R_GetColumn(int tex, int col);
 void R_InitData(void);
 void R_PrecacheLevel(void);
 
+#ifdef CRISPY_TRUECOLOR
+extern void R_InitTrueColormaps(char *current_colormap);
+#endif
 
 //
 // R_things.c
@@ -563,7 +572,7 @@ extern int dc_yh;
 extern fixed_t dc_iscale;
 extern fixed_t dc_texturemid;
 extern byte *dc_source;         // first pixel in a column
-extern byte *ylookup[MAXHEIGHT];
+extern pixel_t *ylookup[MAXHEIGHT];
 extern int columnofs[MAXWIDTH];
 extern int dc_texheight; // [crispy]
 extern const byte *dc_brightmap;
