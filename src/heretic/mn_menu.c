@@ -2222,7 +2222,7 @@ boolean MN_Responder(event_t * event)
     if (!MenuActive)
     {
         // [crispy] don't pop up the menu on other keys during a demo
-        if (key == key_menu_activate) //|| gamestate == GS_DEMOSCREEN || demoplayback)
+        if (key == key_menu_activate || gamestate == GS_DEMOSCREEN || (demoplayback && !singledemo))
         {
             MN_ActivateMenu();
             return (true);
